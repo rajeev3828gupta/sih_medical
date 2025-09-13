@@ -22,7 +22,7 @@ const AISymptomsScreen: React.FC<AISymptomsScreenProps> = ({ navigation }) => {
 
   const handleAnalyzeSymptoms = () => {
     if (!symptoms.trim()) {
-      Alert.alert('No Symptom', 'Please describe your symptoms first.');
+      Alert.alert('No Symptoms', 'Please describe your symptoms first.');
       return;
     }
 
