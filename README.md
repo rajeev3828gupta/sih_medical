@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Telemedicine Nabha App
 
 A comprehensive telemedicine platform designed for rural healthcare delivery with offline support and low-bandwidth optimization.
@@ -50,3 +51,6 @@ Each module has its own README with specific setup instructions:
 - Docker containers for production
 - GitHub Actions CI/CD pipeline
 - Scalable microservices architecture
+=======
+# sih_medical
+>>>>>>> 9c59550958c4cf8caae277acb69eb22f8d4b9eb4
