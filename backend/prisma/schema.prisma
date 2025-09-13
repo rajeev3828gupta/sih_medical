@@ -1,0 +1,331 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  role        UserRole @default(PATIENT)
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  patient     Patient?
+  doctor      Doctor?
+  pharmacy    Pharmacy?
+  otpCodes    OtpCode[]
+  auditLogs   AuditLog[]
+
+  @@map("users")
+}
+
+model Patient {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  firstName     String
+  lastName      String
+  dateOfBirth   DateTime?
+  gender        Gender?
+  address       String?
+  emergencyContact String?
+  bloodGroup    String?
+  allergies     String?
+  medicalHistory String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  consultations Consultation[]
+  prescriptions Prescription[]
+  healthRecords HealthRecord[]
+
+  @@map("patients")
+}
+
+model Doctor {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  firstName       String
+  lastName        String
+  specialization  String
+  licenseNumber   String   @unique
+  experience      Int
+  qualifications  String
+  isAvailable     Boolean  @default(true)
+  consultationFee Decimal
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  consultations Consultation[]
+  prescriptions Prescription[]
+
+  @@map("doctors")
+}
+
+model Pharmacy {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String
+  address     String
+  phone       String
+  licenseNumber String @unique
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicines   Medicine[]
+
+  @@map("pharmacies")
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  patientId   String
+  doctorId    String
+  scheduledAt DateTime
+  duration    Int               @default(30) // minutes
+  type        AppointmentType
+  status      AppointmentStatus @default(SCHEDULED)
+  reason      String?
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relationships
+  patient     Patient @relation(fields: [patientId], references: [id])
+  doctor      Doctor @relation(fields: [doctorId], references: [id])
+  consultation Consultation?
+
+  @@map("appointments")
+}
+
+model Consultation {
+  id            String           @id @default(cuid())
+  appointmentId String           @unique
+  patientId     String
+  doctorId      String
+  startedAt     DateTime?
+  endedAt       DateTime?
+  status        ConsultationStatus @default(PENDING)
+  type          ConsultationType
+  meetingId     String?
+  notes         String?
+  diagnosis     String?
+  symptoms      String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relationships
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  patient       Patient @relation(fields: [patientId], references: [id])
+  doctor        Doctor @relation(fields: [doctorId], references: [id])
+  prescription  Prescription?
+  messages      ConsultationMessage[]
+
+  @@map("consultations")
+}
+
+model ConsultationMessage {
+  id             String   @id @default(cuid())
+  consultationId String
+  senderId       String
+  senderType     UserRole
+  message        String
+  messageType    MessageType @default(TEXT)
+  fileUrl        String?
+  createdAt      DateTime @default(now())
+
+  // Relationships
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+
+  @@map("consultation_messages")
+}
+
+model Prescription {
+  id             String   @id @default(cuid())
+  consultationId String   @unique
+  patientId      String
+  doctorId       String
+  medicines      Json     // Array of prescribed medicines
+  instructions   String?
+  issuedAt       DateTime @default(now())
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  patient        Patient @relation(fields: [patientId], references: [id])
+  doctor         Doctor @relation(fields: [doctorId], references: [id])
+
+  @@map("prescriptions")
+}
+
+model Medicine {
+  id            String   @id @default(cuid())
+  pharmacyId    String
+  name          String
+  genericName   String?
+  manufacturer  String
+  dosage        String
+  form          String   // tablet, syrup, injection, etc.
+  price         Decimal
+  stock         Int
+  expiryDate    DateTime
+  description   String?
+  isAvailable   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  pharmacy      Pharmacy @relation(fields: [pharmacyId], references: [id])
+
+  @@map("medicines")
+}
+
+model HealthRecord {
+  id        String          @id @default(cuid())
+  patientId String
+  type      HealthRecordType
+  title     String
+  data      Json            // Flexible JSON data for different record types
+  fileUrl   String?
+  recordDate DateTime
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Relationships
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  @@map("health_records")
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  phone     String
+  code      String
+  purpose   OtpPurpose
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relationships
+  user      User @relation(fields: [userId], references: [id])
+
+  @@map("otp_codes")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Relationships
+  user      User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SymptomCheck {
+  id          String   @id @default(cuid())
+  sessionId   String
+  symptoms    Json     // Array of reported symptoms
+  triage      TriageLevel
+  recommendations String
+  needsDoctor Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("symptom_checks")
+}
+
+// Enums
+enum UserRole {
+  PATIENT
+  DOCTOR
+  PHARMACY
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AppointmentType {
+  VIDEO
+  AUDIO
+  CHAT
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ConsultationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ConsultationType {
+  VIDEO
+  AUDIO
+  CHAT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+}
+
+enum HealthRecordType {
+  LAB_REPORT
+  PRESCRIPTION
+  VACCINATION
+  MEDICAL_CERTIFICATE
+  IMAGING
+  OTHER
+}
+
+enum OtpPurpose {
+  LOGIN
+  REGISTRATION
+  PASSWORD_RESET
+}
+
+enum TriageLevel {
+  GREEN   // Self-care
+  YELLOW  // Consult doctor
+  RED     // Urgent care
+}

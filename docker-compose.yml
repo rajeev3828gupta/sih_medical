@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: telemedicine_db
+    environment:
+      POSTGRES_DB: telemedicine_nabha
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - telemedicine_network
+
+  backend:
+    build: ./backend
+    container_name: telemedicine_backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/telemedicine_nabha
+      JWT_SECRET: your-super-secret-jwt-key
+      NODE_ENV: development
+    depends_on:
+      - postgres
+    networks:
+      - telemedicine_network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build: ./frontend
+    container_name: telemedicine_frontend
+    ports:
+      - "3001:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:3000
+    networks:
+      - telemedicine_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+
+networks:
+  telemedicine_network:
+    driver: bridge
