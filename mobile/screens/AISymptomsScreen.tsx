@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
@@ -15,14 +16,32 @@ type AISymptomsScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'AISymptoms'>;
 };
 
+const { width } = Dimensions.get('window');
+
 const AISymptomsScreen: React.FC<AISymptomsScreenProps> = ({ navigation }) => {
   const [symptoms, setSymptoms] = useState('');
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const commonSymptoms = [
+    '🤒 Fever', '🤧 Runny Nose', '😷 Cough', '🤕 Headache',
+    '🤢 Nausea', '😵 Dizziness', '😴 Fatigue', '🦷 Tooth Pain',
+    '💔 Chest Pain', '🤲 Joint Pain', '👁️ Eye Pain', '👂 Ear Pain',
+    '🤰 Abdominal Pain', '🦵 Leg Pain', '🗣️ Sore Throat', '🌡️ Chills'
+  ];
+
+  const handleSymptomSelect = (symptom: string) => {
+    if (selectedSymptoms.includes(symptom)) {
+      setSelectedSymptoms(selectedSymptoms.filter(s => s !== symptom));
+    } else {
+      setSelectedSymptoms([...selectedSymptoms, symptom]);
+    }
+  };
+
   const handleAnalyzeSymptoms = () => {
-    if (!symptoms.trim()) {
-      Alert.alert('No Symptoms', 'Please describe your symptoms first.');
+    if (!symptoms.trim() && selectedSymptoms.length === 0) {
+      Alert.alert('No Symptoms', 'Please describe your symptoms or select from common symptoms.');
       return;
     }
 
@@ -33,107 +52,253 @@ const AISymptomsScreen: React.FC<AISymptomsScreenProps> = ({ navigation }) => {
       const mockAnalysis = {
         possibleConditions: [
           {
-            name: 'Common Cold',
-            confidence: 85,
-            recommendation: 'Rest, stay hydrated, and monitor symptoms. Consult a doctor if symptoms worsen.',
+            name: 'Viral Upper Respiratory Infection',
+            confidence: 87,
+            description: 'Common viral infection affecting the nose, throat, and sinuses',
+            recommendation: 'Rest, stay hydrated, and monitor symptoms. Consult a doctor if symptoms worsen or persist beyond 7-10 days.',
+            severity: 'Mild',
+            duration: '7-10 days',
           },
           {
             name: 'Seasonal Allergies',
-            confidence: 65,
-            recommendation: 'Consider antihistamines and avoid known allergens. Consult an allergist if symptoms persist.',
+            confidence: 73,
+            description: 'Allergic reaction to environmental allergens like pollen',
+            recommendation: 'Consider antihistamines, avoid known allergens, and use air purifiers. Consult an allergist if symptoms persist.',
+            severity: 'Mild',
+            duration: 'Seasonal',
+          },
+          {
+            name: 'Acute Sinusitis',
+            confidence: 45,
+            description: 'Inflammation of the sinuses, often following a cold',
+            recommendation: 'Use nasal decongestants, warm compresses, and stay hydrated. See a doctor if symptoms worsen.',
+            severity: 'Moderate',
+            duration: '2-4 weeks',
           },
         ],
-        severity: 'Mild',
+        overallSeverity: 'Mild to Moderate',
         urgency: 'Non-urgent',
-        recommendations: [
-          'Get adequate rest and sleep',
-          'Stay well hydrated',
-          'Monitor your symptoms',
-          'Seek medical attention if symptoms worsen',
+        generalRecommendations: [
+          '🛌 Get adequate rest and sleep (8+ hours)',
+          '💧 Stay well hydrated (8-10 glasses of water daily)',
+          '🍊 Maintain a healthy diet with vitamin C',
+          '🌡️ Monitor your temperature regularly',
+          '😷 Practice good hygiene and hand washing',
+          '🏠 Avoid close contact with others to prevent spread'
         ],
+        warningSigns: [
+          'High fever (>101.3°F / 38.5°C)',
+          'Difficulty breathing or shortness of breath',
+          'Severe chest pain',
+          'Persistent vomiting',
+          'Signs of dehydration',
+          'Symptoms lasting more than 10 days'
+        ],
+        consultDoctor: 'Consider consulting a healthcare provider if symptoms worsen, persist beyond expected duration, or if you experience any warning signs.',
       };
+      
       setAnalysis(mockAnalysis);
       setIsAnalyzing(false);
     }, 2000);
   };
 
-  const handleGoBack = () => {
-    navigation.goBack();
+  const getSeverityColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'mild': return '#10B981';
+      case 'moderate': return '#F59E0B';
+      case 'severe': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
+
+  const getSeverityBackgroundColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'mild': return '#ECFDF5';
+      case 'moderate': return '#FFFBEB';
+      case 'severe': return '#FEF2F2';
+      default: return '#F3F4F6';
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.backButtonContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>AI Health Assistant</Text>
+        <Text style={styles.headerSubtitle}>Describe your symptoms for preliminary analysis</Text>
+        <View style={styles.disclaimer}>
+          <Text style={styles.disclaimerText}>
+            ⚠️ This is not a substitute for professional medical advice. Always consult a healthcare provider for accurate diagnosis.
+          </Text>
+        </View>
       </View>
 
       {/* Symptom Input */}
-      <View style={styles.symptomInputSection}>
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Describe Your Symptoms</Text>
         <TextInput
-          style={styles.symptomInput}
-          multiline
-          numberOfLines={6}
-          placeholder="Please describe your symptoms in detail... (e.g., fever, headache, cough, duration, severity)"
-          placeholderTextColor="#666"
+          style={styles.textInput}
+          placeholder="Please describe your symptoms in detail..."
+          placeholderTextColor="#94A3B8"
           value={symptoms}
           onChangeText={setSymptoms}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
         />
+      </View>
+
+      {/* Common Symptoms */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Common Symptoms</Text>
+        <Text style={styles.sectionSubtitle}>Tap to select symptoms you're experiencing</Text>
+        <View style={styles.symptomsGrid}>
+          {commonSymptoms.map((symptom, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.symptomChip,
+                selectedSymptoms.includes(symptom) && styles.selectedSymptomChip
+              ]}
+              onPress={() => handleSymptomSelect(symptom)}
+            >
+              <Text style={[
+                styles.symptomText,
+                selectedSymptoms.includes(symptom) && styles.selectedSymptomText
+              ]}>
+                {symptom}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Analyze Button */}
+      <View style={styles.section}>
         <TouchableOpacity
-          style={[styles.analyzeButton, isAnalyzing && { opacity: 0.6 }]}
+          style={[styles.analyzeButton, isAnalyzing && styles.analyzingButton]}
           onPress={handleAnalyzeSymptoms}
           disabled={isAnalyzing}
         >
           <Text style={styles.analyzeButtonText}>
-            {isAnalyzing ? 'Analyzing...' : 'Analyze Symptoms'}
+            {isAnalyzing ? '🤖 Analyzing Symptoms...' : '🩺 Analyze Symptoms'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Analysis Results */}
       {analysis && (
-        <View style={styles.analysisSection}>
-          <Text style={styles.sectionTitle}>AI Analysis Results</Text>
-          
-          <View style={styles.analysisCard}>
-            <View style={styles.analysisHeader}>
-              <Text style={styles.conditionName}>Possible Conditions</Text>
-              <View style={styles.severityContainer}>
-                <Text style={styles.severityLabel}>Severity: </Text>
-                <Text style={[styles.severityValue, { color: analysis.severity === 'Mild' ? '#10b981' : '#ef4444' }]}>
-                  {analysis.severity}
-                </Text>
+        <View style={styles.resultsSection}>
+          <Text style={styles.resultsTitle}>Analysis Results</Text>
+
+          {/* Overall Assessment */}
+          <View style={styles.overallCard}>
+            <Text style={styles.overallTitle}>Overall Assessment</Text>
+            <View style={styles.overallDetails}>
+              <View style={styles.assessmentRow}>
+                <Text style={styles.assessmentLabel}>Severity:</Text>
+                <View style={[
+                  styles.severityBadge,
+                  { backgroundColor: getSeverityBackgroundColor(analysis.overallSeverity) }
+                ]}>
+                  <Text style={[
+                    styles.severityText,
+                    { color: getSeverityColor(analysis.overallSeverity) }
+                  ]}>
+                    {analysis.overallSeverity}
+                  </Text>
+                </View>
               </View>
-            </View>
-
-            {analysis.possibleConditions.map((condition: any, index: number) => (
-              <View key={index} style={styles.resultCard}>
-                <Text style={styles.conditionName}>{condition.name}</Text>
-                <Text style={styles.confidenceText}>Confidence: {condition.confidence}%</Text>
-                <Text style={styles.recommendationText}>{condition.recommendation}</Text>
+              <View style={styles.assessmentRow}>
+                <Text style={styles.assessmentLabel}>Urgency:</Text>
+                <Text style={styles.assessmentValue}>{analysis.urgency}</Text>
               </View>
-            ))}
-
-            <Text style={styles.recommendationsTitle}>Recommendations:</Text>
-            {analysis.recommendations.map((rec: string, index: number) => (
-              <Text key={index} style={styles.recommendationItem}>• {rec}</Text>
-            ))}
-
-            <View style={styles.disclaimerBox}>
-              <Text style={styles.disclaimerText}>
-                ⚠️ This is an AI-powered preliminary assessment. Always consult with a qualified healthcare professional for proper diagnosis and treatment.
-              </Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.consultButton}
-            onPress={() => navigation.navigate('Consultation')}
-          >
-            <Text style={styles.consultButtonText}>Consult a Doctor</Text>
-          </TouchableOpacity>
+          {/* Possible Conditions */}
+          <View style={styles.conditionsSection}>
+            <Text style={styles.sectionTitle}>Possible Conditions</Text>
+            {analysis.possibleConditions.map((condition: any, index: number) => (
+              <View key={index} style={styles.conditionCard}>
+                <View style={styles.conditionHeader}>
+                  <Text style={styles.conditionName}>{condition.name}</Text>
+                  <View style={styles.confidenceContainer}>
+                    <Text style={styles.confidenceText}>{condition.confidence}%</Text>
+                    <View style={styles.confidenceBar}>
+                      <View 
+                        style={[
+                          styles.confidenceFill, 
+                          { width: `${condition.confidence}%` }
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                </View>
+                <Text style={styles.conditionDescription}>{condition.description}</Text>
+                <View style={styles.conditionDetails}>
+                  <View style={styles.conditionMeta}>
+                    <Text style={styles.metaLabel}>Severity:</Text>
+                    <View style={[
+                      styles.severityBadge,
+                      { backgroundColor: getSeverityBackgroundColor(condition.severity) }
+                    ]}>
+                      <Text style={[
+                        styles.severityText,
+                        { color: getSeverityColor(condition.severity) }
+                      ]}>
+                        {condition.severity}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.conditionMeta}>
+                    <Text style={styles.metaLabel}>Duration:</Text>
+                    <Text style={styles.metaValue}>{condition.duration}</Text>
+                  </View>
+                </View>
+                <View style={styles.recommendationBox}>
+                  <Text style={styles.recommendationLabel}>💡 Recommendation:</Text>
+                  <Text style={styles.recommendationText}>{condition.recommendation}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* General Recommendations */}
+          <View style={styles.recommendationsSection}>
+            <Text style={styles.sectionTitle}>General Recommendations</Text>
+            <View style={styles.recommendationsList}>
+              {analysis.generalRecommendations.map((rec: string, index: number) => (
+                <View key={index} style={styles.recommendationItem}>
+                  <Text style={styles.recommendationItemText}>{rec}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Warning Signs */}
+          <View style={styles.warningSection}>
+            <Text style={styles.warningTitle}>⚠️ Seek Immediate Medical Attention If You Experience:</Text>
+            <View style={styles.warningList}>
+              {analysis.warningSigns.map((warning: string, index: number) => (
+                <View key={index} style={styles.warningItem}>
+                  <Text style={styles.warningText}>• {warning}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Doctor Consultation */}
+          <View style={styles.consultationCard}>
+            <Text style={styles.consultationTitle}>👩‍⚕️ Professional Consultation</Text>
+            <Text style={styles.consultationText}>{analysis.consultDoctor}</Text>
+            <TouchableOpacity
+              style={styles.consultButton}
+              onPress={() => navigation.navigate('Consultation')}
+            >
+              <Text style={styles.consultButtonText}>Book Consultation</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -143,145 +308,349 @@ const AISymptomsScreen: React.FC<AISymptomsScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-    padding: 16,
+    backgroundColor: '#F8FAFC',
   },
-  backButtonContainer: {
-    marginBottom: 20,
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1e1e1e',
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
   },
-  backButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  symptomInputSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 12,
-  },
-  symptomInput: {
-    backgroundColor: '#1e1e1e',
-    color: '#ffffff',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    minHeight: 120,
-    textAlignVertical: 'top',
+  headerSubtitle: {
     fontSize: 16,
-  },
-  analyzeButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  analyzeButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  analysisSection: {
-    marginTop: 24,
-  },
-  analysisCard: {
-    backgroundColor: '#1e1e1e',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
+    color: '#64748B',
+    fontWeight: '500',
     marginBottom: 16,
   },
-  analysisHeader: {
+  disclaimer: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#92400E',
+    lineHeight: 16,
+  },
+  section: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 16,
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#1E293B',
+    minHeight: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  symptomsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  symptomChip: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 8,
+  },
+  selectedSymptomChip: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0EA5E9',
+  },
+  symptomText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  selectedSymptomText: {
+    color: '#0EA5E9',
+    fontWeight: '600',
+  },
+  analyzeButton: {
+    backgroundColor: '#0EA5E9',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#0EA5E9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  analyzingButton: {
+    backgroundColor: '#94A3B8',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  analyzeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  resultsSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  resultsTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  overallCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  overallTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  overallDetails: {
+    gap: 8,
+  },
+  assessmentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  severityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  severityLabel: {
-    color: '#999',
+  assessmentLabel: {
     fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  severityValue: {
+  assessmentValue: {
     fontSize: 14,
+    color: '#1E293B',
     fontWeight: '600',
   },
-  resultCard: {
-    backgroundColor: '#2a2a2a',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 12,
+  severityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  severityText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  conditionsSection: {
+    marginBottom: 20,
+  },
+  conditionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  conditionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   conditionName: {
     fontSize: 16,
-    color: '#ffffff',
+    fontWeight: '700',
+    color: '#1E293B',
+    flex: 1,
+  },
+  confidenceContainer: {
+    alignItems: 'flex-end',
+    minWidth: 60,
+  },
+  confidenceText: {
+    fontSize: 12,
+    color: '#0EA5E9',
     fontWeight: '600',
     marginBottom: 4,
   },
-  confidenceText: {
+  confidenceBar: {
+    width: 50,
+    height: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 2,
+  },
+  confidenceFill: {
+    height: 4,
+    backgroundColor: '#0EA5E9',
+    borderRadius: 2,
+  },
+  conditionDescription: {
     fontSize: 14,
-    color: '#4CAF50',
-    marginBottom: 8,
+    color: '#64748B',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  conditionDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  conditionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metaLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  metaValue: {
+    fontSize: 12,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  recommendationBox: {
+    backgroundColor: '#F0F9FF',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0EA5E9',
+  },
+  recommendationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
   },
   recommendationText: {
     fontSize: 14,
-    color: '#ccc',
+    color: '#64748B',
     lineHeight: 20,
   },
-  recommendationsTitle: {
-    fontSize: 16,
-    color: '#ffffff',
-    fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 12,
+  recommendationsSection: {
+    marginBottom: 20,
+  },
+  recommendationsList: {
+    gap: 8,
   },
   recommendationItem: {
-    fontSize: 14,
-    color: '#ccc',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  disclaimerBox: {
-    backgroundColor: '#2a1f1f',
+    backgroundColor: '#FFFFFF',
     padding: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ff6b6b',
-    marginTop: 12,
+    borderColor: '#E2E8F0',
   },
-  disclaimerText: {
-    color: '#ff6b6b',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
+  recommendationItemText: {
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  warningSection: {
+    backgroundColor: '#FEF2F2',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#DC2626',
+    marginBottom: 12,
+  },
+  warningList: {
+    gap: 6,
+  },
+  warningItem: {
+    flexDirection: 'row',
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#DC2626',
+    lineHeight: 20,
+  },
+  consultationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  consultationTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  consultationText: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 16,
   },
   consultButton: {
-    backgroundColor: '#2196F3',
-    paddingVertical: 16,
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   consultButtonText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });
 

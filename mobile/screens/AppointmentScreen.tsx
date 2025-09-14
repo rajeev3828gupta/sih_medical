@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
@@ -14,239 +15,543 @@ type AppointmentScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'Appointment'>;
 };
 
+const { width } = Dimensions.get('window');
+
 const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ navigation }) => {
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedTab, setSelectedTab] = useState<'upcoming' | 'past'>('upcoming');
 
-  const dates = Array.from({ length: 14 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    return {
-      day: date.getDate().toString(),
-      month: date.toLocaleDateString('en', { month: 'short' }),
-      fullDate: date.toDateString(),
-    };
-  });
-
-  const timeSlots = [
-    '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
-    '11:00 AM', '11:30 AM', '02:00 PM', '02:30 PM',
-    '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
+  const upcomingAppointments = [
+    {
+      id: 1,
+      doctorName: 'Dr. Sarah Johnson',
+      specialty: 'General Medicine',
+      date: 'Today',
+      time: '2:30 PM',
+      type: 'Video Call',
+      status: 'Confirmed',
+      avatar: '👩‍⚕️',
+      duration: '30 min',
+      location: 'Online',
+    },
+    {
+      id: 2,
+      doctorName: 'Dr. Michael Chen',
+      specialty: 'Cardiology',
+      date: 'Tomorrow',
+      time: '10:00 AM',
+      type: 'In-person',
+      status: 'Confirmed',
+      avatar: '👨‍⚕️',
+      duration: '45 min',
+      location: 'City Hospital, Room 302',
+    },
+    {
+      id: 3,
+      doctorName: 'Dr. Emily Davis',
+      specialty: 'Dermatology',
+      date: 'Sep 16, 2025',
+      time: '3:15 PM',
+      type: 'Audio Call',
+      status: 'Pending',
+      avatar: '👩‍⚕️',
+      duration: '25 min',
+      location: 'Phone Call',
+    },
   ];
 
-  const handleConfirmAppointment = () => {
-    if (!selectedDate || !selectedTime) {
-      Alert.alert('Incomplete Selection', 'Please select both date and time.');
-      return;
-    }
-    Alert.alert('Appointment Confirmed', 'Your appointment has been scheduled successfully!');
+  const pastAppointments = [
+    {
+      id: 4,
+      doctorName: 'Dr. Raj Patel',
+      specialty: 'Pediatrics',
+      date: 'Sep 10, 2025',
+      time: '11:30 AM',
+      type: 'Video Call',
+      status: 'Completed',
+      avatar: '👨‍⚕️',
+      rating: 5,
+      notes: 'Regular checkup completed successfully',
+    },
+    {
+      id: 5,
+      doctorName: 'Dr. Lisa Wang',
+      specialty: 'Endocrinology',
+      date: 'Sep 5, 2025',
+      time: '4:00 PM',
+      type: 'In-person',
+      status: 'Completed',
+      avatar: '👩‍⚕️',
+      rating: 4,
+      notes: 'Diabetes management consultation',
+    },
+  ];
+
+  const handleReschedule = (appointmentId: number) => {
+    Alert.alert('Reschedule Appointment', 'Would you like to reschedule this appointment?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reschedule', onPress: () => console.log('Reschedule appointment', appointmentId) },
+    ]);
   };
 
-  const handleGoBack = () => {
-    navigation.goBack();
+  const handleCancel = (appointmentId: number) => {
+    Alert.alert('Cancel Appointment', 'Are you sure you want to cancel this appointment?', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes, Cancel', style: 'destructive', onPress: () => console.log('Cancel appointment', appointmentId) },
+    ]);
   };
+
+  const handleJoinCall = (appointmentId: number) => {
+    Alert.alert('Join Call', 'Starting your consultation...', [
+      { text: 'OK', onPress: () => console.log('Join call', appointmentId) },
+    ]);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Confirmed': return '#10B981';
+      case 'Pending': return '#F59E0B';
+      case 'Completed': return '#6B7280';
+      default: return '#6B7280';
+    }
+  };
+
+  const getStatusBackgroundColor = (status: string) => {
+    switch (status) {
+      case 'Confirmed': return '#ECFDF5';
+      case 'Pending': return '#FFFBEB';
+      case 'Completed': return '#F3F4F6';
+      default: return '#F3F4F6';
+    }
+  };
+
+  const renderUpcomingAppointment = (appointment: any) => (
+    <View key={appointment.id} style={styles.appointmentCard}>
+      <View style={styles.appointmentHeader}>
+        <View style={styles.doctorInfo}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatar}>{appointment.avatar}</Text>
+          </View>
+          <View style={styles.doctorDetails}>
+            <Text style={styles.doctorName}>{appointment.doctorName}</Text>
+            <Text style={styles.specialty}>{appointment.specialty}</Text>
+          </View>
+        </View>
+        <View style={[
+          styles.statusBadge,
+          { backgroundColor: getStatusBackgroundColor(appointment.status) }
+        ]}>
+          <Text style={[
+            styles.statusText,
+            { color: getStatusColor(appointment.status) }
+          ]}>
+            {appointment.status}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.appointmentDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>📅</Text>
+          <Text style={styles.detailText}>{appointment.date} at {appointment.time}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>🕒</Text>
+          <Text style={styles.detailText}>Duration: {appointment.duration}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>📍</Text>
+          <Text style={styles.detailText}>{appointment.location}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>{appointment.type === 'Video Call' ? '🎥' : appointment.type === 'Audio Call' ? '📞' : '🏥'}</Text>
+          <Text style={styles.detailText}>{appointment.type}</Text>
+        </View>
+      </View>
+
+      <View style={styles.appointmentActions}>
+        {appointment.date === 'Today' && appointment.status === 'Confirmed' && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.joinButton]}
+            onPress={() => handleJoinCall(appointment.id)}
+          >
+            <Text style={styles.joinButtonText}>Join Call</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.rescheduleButton]}
+          onPress={() => handleReschedule(appointment.id)}
+        >
+          <Text style={styles.rescheduleButtonText}>Reschedule</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.cancelButton]}
+          onPress={() => handleCancel(appointment.id)}
+        >
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderPastAppointment = (appointment: any) => (
+    <View key={appointment.id} style={styles.appointmentCard}>
+      <View style={styles.appointmentHeader}>
+        <View style={styles.doctorInfo}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatar}>{appointment.avatar}</Text>
+          </View>
+          <View style={styles.doctorDetails}>
+            <Text style={styles.doctorName}>{appointment.doctorName}</Text>
+            <Text style={styles.specialty}>{appointment.specialty}</Text>
+          </View>
+        </View>
+        <View style={styles.ratingContainer}>
+          <Text style={styles.ratingText}>{'⭐'.repeat(appointment.rating)}</Text>
+          <Text style={styles.ratingValue}>{appointment.rating}/5</Text>
+        </View>
+      </View>
+
+      <View style={styles.appointmentDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>📅</Text>
+          <Text style={styles.detailText}>{appointment.date} at {appointment.time}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>📋</Text>
+          <Text style={styles.detailText}>{appointment.notes}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailIcon}>{appointment.type === 'Video Call' ? '🎥' : '🏥'}</Text>
+          <Text style={styles.detailText}>{appointment.type}</Text>
+        </View>
+      </View>
+
+      <View style={styles.appointmentActions}>
+        <TouchableOpacity style={[styles.actionButton, styles.reportButton]}>
+          <Text style={styles.reportButtonText}>View Report</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionButton, styles.rebookButton]}>
+          <Text style={styles.rebookButtonText}>Book Again</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.backButtonContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Text style={styles.backButtonText}>←</Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Appointments</Text>
+        <Text style={styles.headerSubtitle}>Manage your medical consultations</Text>
+      </View>
+
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === 'upcoming' && styles.activeTab]}
+          onPress={() => setSelectedTab('upcoming')}
+        >
+          <Text style={[styles.tabText, selectedTab === 'upcoming' && styles.activeTabText]}>
+            Upcoming
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === 'past' && styles.activeTab]}
+          onPress={() => setSelectedTab('past')}
+        >
+          <Text style={[styles.tabText, selectedTab === 'past' && styles.activeTabText]}>
+            Past
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Date Selection */}
-      <View style={styles.dateSection}>
-        <Text style={styles.sectionTitle}>Select Date</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-          {dates.map((date, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.dateCard, selectedDate === date.fullDate && styles.selectedDateCard]}
-              onPress={() => setSelectedDate(date.fullDate)}
-            >
-              <Text style={[styles.dateText, selectedDate === date.fullDate && styles.selectedDateText]}>
-                {date.month}
-              </Text>
-              <Text style={[styles.dateText, selectedDate === date.fullDate && styles.selectedDateText]}>
-                {date.day}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Time Selection */}
-      <View style={styles.timeSection}>
-        <Text style={styles.sectionTitle}>Select Time</Text>
-        <View style={styles.timeGrid}>
-          {timeSlots.map((time) => (
-            <TouchableOpacity
-              key={time}
-              style={[styles.timeCard, selectedTime === time && styles.selectedTimeCard]}
-              onPress={() => setSelectedTime(time)}
-            >
-              <Text style={[styles.timeText, selectedTime === time && styles.selectedTimeText]}>
-                {time}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Appointment Summary */}
-      {selectedDate && selectedTime && (
-        <View style={styles.bookingSection}>
-          <Text style={styles.sectionTitle}>Appointment Summary</Text>
-          <View style={styles.appointmentDetailsCard}>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Date:</Text>
-              <Text style={styles.detailValue}>{selectedDate}</Text>
+      {/* Appointments List */}
+      <ScrollView style={styles.appointmentsList} showsVerticalScrollIndicator={false}>
+        {selectedTab === 'upcoming' ? (
+          upcomingAppointments.length > 0 ? (
+            upcomingAppointments.map(renderUpcomingAppointment)
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>📅</Text>
+              <Text style={styles.emptyStateTitle}>No Upcoming Appointments</Text>
+              <Text style={styles.emptyStateSubtitle}>Book a consultation to get started</Text>
+              <TouchableOpacity
+                style={styles.bookButton}
+                onPress={() => navigation.navigate('Consultation')}
+              >
+                <Text style={styles.bookButtonText}>Book Appointment</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Time:</Text>
-              <Text style={styles.detailValue}>{selectedTime}</Text>
+          )
+        ) : (
+          pastAppointments.length > 0 ? (
+            pastAppointments.map(renderPastAppointment)
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>📋</Text>
+              <Text style={styles.emptyStateTitle}>No Past Appointments</Text>
+              <Text style={styles.emptyStateSubtitle}>Your completed consultations will appear here</Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Doctor:</Text>
-              <Text style={styles.detailValue}>Dr. Sarah Johnson</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Consultation Fee:</Text>
-              <Text style={styles.detailValue}>₹500</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmAppointment}>
-            <Text style={styles.confirmButtonText}>Confirm Appointment</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+          )
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-    padding: 16,
+    backgroundColor: '#F8FAFC',
   },
-  backButtonContainer: {
-    marginBottom: 20,
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1e1e1e',
-    justifyContent: 'center',
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
+    marginHorizontal: 4,
   },
-  backButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  activeTab: {
+    backgroundColor: '#0EA5E9',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 12,
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
   },
-  dateSection: {
-    marginBottom: 24,
+  activeTabText: {
+    color: '#FFFFFF',
   },
-  dateScroll: {
-    paddingVertical: 8,
+  appointmentsList: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  dateCard: {
-    width: 60,
-    height: 70,
-    backgroundColor: '#1e1e1e',
-    borderRadius: 8,
+  appointmentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  appointmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  doctorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#333',
+    borderWidth: 2,
+    borderColor: '#DBEAFE',
   },
-  selectedDateCard: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+  avatar: {
+    fontSize: 20,
   },
-  dateText: {
-    color: '#ffffff',
-    fontSize: 12,
-    textAlign: 'center',
+  doctorDetails: {
+    flex: 1,
   },
-  selectedDateText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+  doctorName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
   },
-  timeSection: {
-    marginBottom: 24,
-  },
-  timeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  timeCard: {
-    backgroundColor: '#1e1e1e',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    minWidth: '30%',
-    alignItems: 'center',
-  },
-  selectedTimeCard: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  timeText: {
-    color: '#ffffff',
+  specialty: {
     fontSize: 14,
+    color: '#0EA5E9',
+    fontWeight: '600',
   },
-  selectedTimeText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  bookingSection: {
-    marginTop: 20,
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
-  appointmentDetailsCard: {
-    backgroundColor: '#1e1e1e',
-    padding: 16,
-    borderRadius: 8,
+  ratingContainer: {
+    alignItems: 'flex-end',
+  },
+  ratingText: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  ratingValue: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  appointmentDetails: {
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#333',
   },
   detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  detailLabel: {
-    color: '#999',
-    fontSize: 14,
+  detailIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    width: 24,
   },
-  detailValue: {
-    color: '#ffffff',
+  detailText: {
     fontSize: 14,
-    fontWeight: '600',
+    color: '#64748B',
+    fontWeight: '500',
+    flex: 1,
   },
-  confirmButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 16,
+  appointmentActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
-  confirmButtonText: {
-    color: '#ffffff',
+  joinButton: {
+    backgroundColor: '#10B981',
+  },
+  joinButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rescheduleButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  rescheduleButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  cancelButtonText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reportButton: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  reportButtonText: {
+    color: '#1D4ED8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rebookButton: {
+    backgroundColor: '#0EA5E9',
+  },
+  rebookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  bookButton: {
+    backgroundColor: '#0EA5E9',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#0EA5E9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 
