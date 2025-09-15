@@ -18,6 +18,12 @@ import MedicalRecordsScreen from './screens/MedicalRecordsScreen';
 import EmergencyScreen from './screens/EmergencyScreen';
 import PharmacyScreen from './screens/PharmacyScreen';
 
+// Enhanced Feature Screens
+import MultilingualSymptomChecker from './screens/MultilingualSymptomChecker';
+import ABHAIntegration from './screens/ABHAIntegration';
+import Teleconsultation from './screens/Teleconsultation';
+import LowBandwidthOptimization from './screens/LowBandwidthOptimization';
+
 // Global variable to store dashboard modal functions
 let dashboardModalFunctions: {
   showProfileModal: () => void;
@@ -33,6 +39,31 @@ export const setDashboardModalFunctions = (functions: {
 
 const Stack = createStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
+
+// Consultation Summary Screen Component
+const ConsultationSummaryScreen = ({ route, navigation }: any) => {
+  const { appointmentId, duration, doctorName } = route.params;
+
+  return (
+    <View style={summaryStyles.container}>
+      <View style={summaryStyles.content}>
+        <Text style={summaryStyles.title}>📋 Consultation Summary</Text>
+        <Text style={summaryStyles.subtitle}>
+          Your consultation with Dr. {doctorName} has been completed.
+        </Text>
+        <Text style={summaryStyles.duration}>
+          Duration: {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
+        </Text>
+        <TouchableOpacity 
+          style={summaryStyles.button}
+          onPress={() => navigation.navigate('Dashboard')}
+        >
+          <Text style={summaryStyles.buttonText}>Return to Dashboard</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 export default function App() {
   return (
@@ -133,6 +164,37 @@ export default function App() {
             component={EmergencyScreen} 
             options={{ headerShown: true, title: 'Emergency Care' }}
           />
+          
+          {/* Enhanced Feature Screens */}
+          <Stack.Screen 
+            name="MultilingualSymptomChecker" 
+            component={MultilingualSymptomChecker} 
+            options={{ headerShown: true, title: 'AI Health Assistant' }}
+          />
+          <Stack.Screen 
+            name="ABHAIntegration" 
+            component={ABHAIntegration} 
+            options={{ headerShown: true, title: 'ABHA Health Records' }}
+          />
+          <Stack.Screen 
+            name="Teleconsultation" 
+            component={Teleconsultation} 
+            options={{ 
+              headerShown: false,
+              presentation: 'modal',
+              gestureEnabled: false 
+            }}
+          />
+          <Stack.Screen 
+            name="LowBandwidthOptimization" 
+            component={LowBandwidthOptimization} 
+            options={{ headerShown: true, title: 'Network Settings' }}
+          />
+          <Stack.Screen 
+            name="ConsultationSummary" 
+            component={ConsultationSummaryScreen} 
+            options={{ headerShown: true, title: 'Consultation Summary' }}
+          />
         </Stack.Navigator>
         <StatusBar style="light" />
       </NavigationContainer>
@@ -170,5 +232,49 @@ const headerStyles = StyleSheet.create({
     fontSize: 20,
     color: '#64748B',
     fontWeight: 'bold',
+  },
+});
+
+const summaryStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  duration: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#10B981',
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

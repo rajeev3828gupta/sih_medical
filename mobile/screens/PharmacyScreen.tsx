@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,13 @@ import {
   TextInput,
   Alert,
   Dimensions,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
+import { inventoryService } from '../src/services/inventoryService';
+import { Medicine, InventoryUpdate } from '../src/types/inventory';
 
 type PharmacyScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'Pharmacy'>;
@@ -22,103 +26,213 @@ const PharmacyScreen: React.FC<PharmacyScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<any[]>([]);
   const [selectedTab, setSelectedTab] = useState<'medicines' | 'prescriptions' | 'orders'>('medicines');
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+  const [selectedPharmacyId] = useState('pharmacy_1'); // Default pharmacy - in real app, user would select
 
-  const medicines = [
+  // Load medicines from API
+  const loadMedicines = useCallback(async (forceRefresh = false) => {
+    try {
+      setLoading(!forceRefresh);
+      const medicineData = await inventoryService.getMedicines(selectedPharmacyId, forceRefresh);
+      setMedicines(medicineData);
+    } catch (error) {
+      console.error('Failed to load medicines:', error);
+      Alert.alert('Error', 'Failed to load medicines. Please try again.');
+      
+      // Set fallback data if API fails
+      setMedicines(fallbackMedicines);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [selectedPharmacyId]);
+
+  // Handle real-time inventory updates
+  const handleInventoryUpdate = useCallback((update: InventoryUpdate) => {
+    console.log('📦 Real-time inventory update:', update);
+    
+    setMedicines(currentMedicines => 
+      currentMedicines.map(medicine => {
+        if (medicine.id === update.medicineId) {
+          const updatedMedicine = {
+            ...medicine,
+            stock: update.remainingStock,
+            inStock: update.remainingStock > 0,
+            lowStock: update.remainingStock <= medicine.minimumThreshold,
+            lastUpdated: update.timestamp
+          };
+
+          // Show notification for significant stock changes
+          if (update.quantitySold && update.quantitySold > 0) {
+            Alert.alert(
+              'Stock Update',
+              `${medicine.name} stock updated: ${update.remainingStock} remaining`,
+              [{ text: 'OK' }]
+            );
+          }
+
+          return updatedMedicine;
+        }
+        return medicine;
+      })
+    );
+  }, []);
+
+  // Initialize inventory service and load data
+  useEffect(() => {
+    // Subscribe to pharmacy inventory
+    inventoryService.subscribeToPharmacy(selectedPharmacyId);
+    
+    // Subscribe to real-time updates
+    const unsubscribe = inventoryService.onInventoryUpdate(handleInventoryUpdate);
+    
+    // Load initial data
+    loadMedicines();
+    
+    // Monitor connection status
+    const checkConnection = () => {
+      setConnectionStatus(inventoryService.isConnected() ? 'connected' : 'disconnected');
+    };
+    
+    const connectionInterval = setInterval(checkConnection, 5000);
+    
+    return () => {
+      unsubscribe();
+      clearInterval(connectionInterval);
+    };
+  }, [selectedPharmacyId, loadMedicines, handleInventoryUpdate]);
+
+  // Refresh medicines
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadMedicines(true);
+  }, [loadMedicines]);
+
+  // Fallback medicines data
+  // Fallback medicines data
+  const fallbackMedicines: Medicine[] = [
     { 
-      id: 1, 
+      id: '1', 
       name: 'Paracetamol 500mg', 
       price: 25, 
-      originalPrice: 30,
+      genericName: 'Acetaminophen',
+      stock: 150,
+      minimumThreshold: 20,
       inStock: true, 
+      lowStock: false,
       description: 'Pain relief and fever reducer',
       category: 'Pain',
       manufacturer: 'ABC Pharma',
       expiryDate: '2025-12-31',
-      rating: 4.5,
-      reviews: 128,
-      discount: 17,
-      prescription: false,
-      image: '💊'
+      batchNumber: 'BATCH001',
+      strength: '500mg',
+      dosageForm: 'Tablet',
+      prescriptionRequired: false,
+      pharmacyName: 'MediMart Pharmacy',
+      lastUpdated: new Date().toISOString()
     },
     { 
-      id: 2, 
+      id: '2', 
       name: 'Amoxicillin 250mg', 
       price: 120, 
-      originalPrice: 135,
-      inStock: true, 
+      genericName: 'Amoxicillin',
+      stock: 75,
+      minimumThreshold: 15,
+      inStock: true,
+      lowStock: false, 
       description: 'Antibiotic for bacterial infections',
       category: 'Antibiotics',
       manufacturer: 'XYZ Medicines',
       expiryDate: '2025-08-15',
-      rating: 4.7,
-      reviews: 89,
-      discount: 11,
-      prescription: true,
-      image: '🦠'
+      batchNumber: 'BATCH002',
+      strength: '250mg',
+      dosageForm: 'Capsule',
+      prescriptionRequired: true,
+      pharmacyName: 'MediMart Pharmacy',
+      lastUpdated: new Date().toISOString()
     },
     { 
-      id: 3, 
+      id: '3', 
       name: 'Cetirizine 10mg', 
       price: 45, 
-      originalPrice: 50,
-      inStock: false, 
+      genericName: 'Cetirizine HCl',
+      stock: 0,
+      minimumThreshold: 10,
+      inStock: false,
+      lowStock: true, 
       description: 'Antihistamine for allergies',
       category: 'Cold',
       manufacturer: 'MediCorp',
       expiryDate: '2025-06-20',
-      rating: 4.3,
-      reviews: 76,
-      discount: 10,
-      prescription: false,
-      image: '🤧'
+      batchNumber: 'BATCH003',
+      strength: '10mg',
+      dosageForm: 'Tablet',
+      prescriptionRequired: false,
+      pharmacyName: 'MediMart Pharmacy',
+      lastUpdated: new Date().toISOString()
     },
     { 
-      id: 4, 
+      id: '4', 
       name: 'Vitamin D3 1000 IU', 
       price: 180, 
-      originalPrice: 200,
-      inStock: true, 
+      genericName: 'Cholecalciferol',
+      stock: 200,
+      minimumThreshold: 30,
+      inStock: true,
+      lowStock: false, 
       description: 'Bone health and immunity support',
       category: 'Vitamins',
       manufacturer: 'HealthPlus',
       expiryDate: '2026-03-10',
-      rating: 4.6,
-      reviews: 203,
-      discount: 10,
-      prescription: false,
-      image: '🍊'
+      batchNumber: 'BATCH004',
+      strength: '1000 IU',
+      dosageForm: 'Capsule',
+      prescriptionRequired: false,
+      pharmacyName: 'MediMart Pharmacy',
+      lastUpdated: new Date().toISOString()
     },
     { 
-      id: 5, 
+      id: '5', 
       name: 'Omeprazole 20mg', 
       price: 85, 
-      originalPrice: 95,
-      inStock: true, 
+      genericName: 'Omeprazole',
+      stock: 90,
+      minimumThreshold: 15,
+      inStock: true,
+      lowStock: false,
       description: 'Acid reflux and heartburn relief',
       category: 'Digestive',
       manufacturer: 'GastroMed',
       expiryDate: '2025-09-15',
-      rating: 4.4,
-      reviews: 156,
-      discount: 11,
-      prescription: true,
-      image: '🫗'
+      batchNumber: 'BATCH005',
+      strength: '20mg',
+      dosageForm: 'Capsule',
+      prescriptionRequired: true,
+      pharmacyName: 'MediMart Pharmacy',
+      lastUpdated: new Date().toISOString()
     },
     { 
-      id: 6, 
+      id: '6', 
       name: 'Metformin 500mg', 
       price: 95, 
-      originalPrice: 110,
-      inStock: true, 
+      genericName: 'Metformin HCl',
+      stock: 125,
+      minimumThreshold: 25,
+      inStock: true,
+      lowStock: false,
       description: 'Diabetes management medication',
       category: 'Diabetes',
       manufacturer: 'DiabetoCare',
       expiryDate: '2025-11-30',
-      rating: 4.8,
-      reviews: 312,
-      discount: 14,
-      prescription: true,
-      image: '🩸'
+      batchNumber: 'BATCH006',
+      strength: '500mg',
+      dosageForm: 'Tablet',
+      prescriptionRequired: true,
+      pharmacyName: 'MediMart Pharmacy',
+      lastUpdated: new Date().toISOString()
     }
   ];
 
@@ -168,13 +282,13 @@ const PharmacyScreen: React.FC<PharmacyScreenProps> = ({ navigation }) => {
     return matchesSearch;
   });
 
-  const addToCart = (medicine: any) => {
+  const addToCart = (medicine: Medicine) => {
     if (!medicine.inStock) {
       Alert.alert('Out of Stock', 'This medicine is currently out of stock.');
       return;
     }
     
-    if (medicine.prescription) {
+    if (medicine.prescriptionRequired) {
       Alert.alert('Prescription Required', 'This medicine requires a valid prescription. Please upload your prescription first.');
       return;
     }
@@ -225,63 +339,100 @@ const PharmacyScreen: React.FC<PharmacyScreenProps> = ({ navigation }) => {
     }
   };
 
-  const renderMedicineCard = (medicine: any) => (
-    <View key={medicine.id} style={styles.medicineCard}>
-      {medicine.discount > 0 && (
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>{medicine.discount}% OFF</Text>
-        </View>
-      )}
-      
-      <View style={styles.medicineHeader}>
-        <Text style={styles.medicineIcon}>{medicine.image}</Text>
-        <View style={styles.medicineInfo}>
-          <Text style={styles.medicineName}>{medicine.name}</Text>
-          <Text style={styles.medicineDescription}>{medicine.description}</Text>
-          <Text style={styles.manufacturer}>{medicine.manufacturer}</Text>
-        </View>
-      </View>
+  const renderMedicineCard = (medicine: Medicine) => {
+    const getStockIcon = () => {
+      if (!medicine.inStock) return '❌';
+      if (medicine.lowStock) return '⚠️';
+      return '✅';
+    };
 
-      <View style={styles.medicineDetails}>
-        <View style={styles.ratingContainer}>
-          <Text style={styles.ratingStars}>{renderStars(medicine.rating)}</Text>
-          <Text style={styles.ratingText}>{medicine.rating} ({medicine.reviews} reviews)</Text>
+    const getStockColor = () => {
+      if (!medicine.inStock) return '#EF4444';
+      if (medicine.lowStock) return '#F59E0B';
+      return '#10B981';
+    };
+
+    const getStockText = () => {
+      if (!medicine.inStock) return 'Out of Stock';
+      if (medicine.lowStock) return `Low Stock (${medicine.stock} left)`;
+      return `In Stock (${medicine.stock} available)`;
+    };
+
+    const getMedicineIcon = (category: string) => {
+      const icons: Record<string, string> = {
+        'Pain': '💊',
+        'Antibiotics': '🦠',
+        'Cold': '🤧',
+        'Vitamins': '🍊',
+        'Digestive': '🫗',
+        'Diabetes': '🩸'
+      };
+      return icons[category] || '💊';
+    };
+
+    return (
+      <View key={medicine.id} style={styles.medicineCard}>
+        {/* Real-time stock status indicator */}
+        <View style={[styles.stockIndicator, { backgroundColor: getStockColor() }]}>
+          <Text style={styles.stockIndicatorText}>{getStockIcon()}</Text>
         </View>
         
-        <View style={styles.priceContainer}>
-          <Text style={styles.currentPrice}>₹{medicine.price}</Text>
-          {medicine.originalPrice > medicine.price && (
-            <Text style={styles.originalPrice}>₹{medicine.originalPrice}</Text>
-          )}
+        <View style={styles.medicineHeader}>
+          <Text style={styles.medicineIcon}>{getMedicineIcon(medicine.category)}</Text>
+          <View style={styles.medicineInfo}>
+            <Text style={styles.medicineName}>{medicine.name}</Text>
+            <Text style={styles.medicineDescription}>{medicine.description}</Text>
+            <Text style={styles.manufacturer}>{medicine.manufacturer}</Text>
+            <Text style={styles.genericName}>Generic: {medicine.genericName}</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.medicineFooter}>
-        <View style={styles.stockInfo}>
-          <Text style={[
-            styles.stockText, 
-            { color: medicine.inStock ? '#10B981' : '#EF4444' }
-          ]}>
-            {medicine.inStock ? '✓ In Stock' : '✗ Out of Stock'}
-          </Text>
-          {medicine.prescription && (
-            <Text style={styles.prescriptionText}>📋 Prescription Required</Text>
-          )}
+        <View style={styles.medicineDetails}>
+          <View style={styles.stockContainer}>
+            <Text style={[styles.stockText, { color: getStockColor() }]}>
+              {getStockText()}
+            </Text>
+            {medicine.lowStock && medicine.inStock && (
+              <Text style={styles.lowStockWarning}>⚠️ Running low!</Text>
+            )}
+          </View>
+          
+          <View style={styles.priceContainer}>
+            <Text style={styles.currentPrice}>₹{medicine.price}</Text>
+            <Text style={styles.strengthText}>{medicine.strength}</Text>
+          </View>
         </View>
-        
-        <TouchableOpacity
-          style={[
-            styles.addToCartButton,
-            !medicine.inStock && styles.disabledButton
-          ]}
-          onPress={() => addToCart(medicine)}
-          disabled={!medicine.inStock}
-        >
-          <Text style={styles.addToCartText}>Add to Cart</Text>
-        </TouchableOpacity>
+
+        <View style={styles.medicineFooter}>
+          <View style={styles.medicineMetadata}>
+            <Text style={styles.batchText}>Batch: {medicine.batchNumber}</Text>
+            <Text style={styles.expiryText}>Exp: {new Date(medicine.expiryDate).toLocaleDateString()}</Text>
+            {medicine.prescriptionRequired && (
+              <Text style={styles.prescriptionText}>📋 Prescription Required</Text>
+            )}
+          </View>
+          
+          <TouchableOpacity
+            style={[
+              styles.addToCartButton,
+              !medicine.inStock && styles.disabledButton
+            ]}
+            onPress={() => addToCart(medicine)}
+            disabled={!medicine.inStock}
+          >
+            <Text style={styles.addToCartText}>
+              {medicine.inStock ? 'Add to Cart' : 'Out of Stock'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Last updated timestamp */}
+        <Text style={styles.lastUpdatedText}>
+          Last updated: {new Date(medicine.lastUpdated).toLocaleTimeString()}
+        </Text>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderPrescription = (prescription: any) => (
     <View key={prescription.id} style={styles.prescriptionCard}>
@@ -437,15 +588,43 @@ const PharmacyScreen: React.FC<PharmacyScreenProps> = ({ navigation }) => {
             )}
           </View>
 
-          {/* Medicines List */}
-          <ScrollView style={styles.medicinesList} showsVerticalScrollIndicator={false}>
-            {filteredMedicines.length > 0 ? (
+          {/* Medicines List with Real-time Updates */}
+          <ScrollView 
+            style={styles.medicinesList} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#0EA5E9"
+                colors={['#0EA5E9']}
+              />
+            }
+          >
+            {/* Connection Status Indicator */}
+            <View style={styles.connectionStatus}>
+              <View style={[
+                styles.connectionIndicator,
+                { backgroundColor: connectionStatus === 'connected' ? '#10B981' : '#EF4444' }
+              ]}>
+                <Text style={styles.connectionText}>
+                  {connectionStatus === 'connected' ? '🟢 Live Updates' : '🔴 Offline Mode'}
+                </Text>
+              </View>
+            </View>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#0EA5E9" />
+                <Text style={styles.loadingText}>Loading medicines...</Text>
+              </View>
+            ) : filteredMedicines.length > 0 ? (
               filteredMedicines.map(renderMedicineCard)
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateIcon}>💊</Text>
                 <Text style={styles.emptyStateTitle}>No Medicines Found</Text>
-                <Text style={styles.emptyStateSubtitle}>Try adjusting your search or category filter</Text>
+                <Text style={styles.emptyStateSubtitle}>Try adjusting your search or check back later</Text>
               </View>
             )}
           </ScrollView>
@@ -988,6 +1167,91 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Real-time inventory styles
+  stockIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  stockIndicatorText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+  },
+  genericName: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+  },
+  stockContainer: {
+    flex: 1,
+  },
+  lowStockWarning: {
+    fontSize: 10,
+    color: '#F59E0B',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  strengthText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  medicineMetadata: {
+    flex: 1,
+  },
+  batchText: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginBottom: 2,
+  },
+  expiryText: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginBottom: 2,
+  },
+  lastUpdatedText: {
+    fontSize: 10,
+    color: '#CBD5E0',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  connectionStatus: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  connectionIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  connectionText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 12,
   },
 });
 

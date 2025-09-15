@@ -159,13 +159,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           navigation.navigate('Appointment');
           break;
         case 'AISymptoms':
-          navigation.navigate('AISymptoms');
+          // Navigate to enhanced multilingual symptom checker
+          navigation.navigate('MultilingualSymptomChecker');
           break;
         case 'Pharmacy':
           navigation.navigate('Pharmacy');
           break;
         case 'MedicalRecords':
-          navigation.navigate('MedicalRecords');
+          // Navigate to enhanced ABHA integration
+          navigation.navigate('ABHAIntegration');
           break;
         case 'Emergency':
           navigation.navigate('Emergency');
@@ -371,14 +373,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
               </View>
               <FlatList
                 data={[
-                  { id: '1', title: 'Help & Support', icon: '❓', action: () => Alert.alert('Help & Support', 'Feature coming soon!') },
-                  { id: '2', title: 'App Settings', icon: '⚙️', action: () => Alert.alert('App Settings', 'Feature coming soon!') },
-                  { id: '3', title: 'About Us', icon: 'ℹ️', action: () => Alert.alert('About Us', 'Feature coming soon!') },
-                  { id: '4', title: 'Terms & Conditions', icon: '📄', action: () => Alert.alert('Terms & Conditions', 'Feature coming soon!') },
-                  { id: '5', title: 'Privacy Policy', icon: '🛡️', action: () => Alert.alert('Privacy Policy', 'Feature coming soon!') },
-                  { id: '6', title: 'Rate App', icon: '⭐', action: () => Alert.alert('Rate App', 'Feature coming soon!') },
-                  { id: '7', title: 'Share App', icon: '📤', action: () => Alert.alert('Share App', 'Feature coming soon!') },
-                  { id: '8', title: 'Logout', icon: '🚪', action: () => Alert.alert('Logout', 'Are you sure you want to logout?', [
+                  { id: '1', title: 'Network Settings', icon: '📶', action: () => {
+                    setMoreModalVisible(false);
+                    navigation.navigate('LowBandwidthOptimization');
+                  }},
+                  { id: '2', title: 'Help & Support', icon: '❓', action: () => Alert.alert('Help & Support', 'Feature coming soon!') },
+                  { id: '3', title: 'App Settings', icon: '⚙️', action: () => Alert.alert('App Settings', 'Feature coming soon!') },
+                  { id: '4', title: 'About Us', icon: 'ℹ️', action: () => Alert.alert('About Us', 'SIH Medical - Telemedicine for Rural Healthcare\nServing 173 villages around Nabha, Punjab') },
+                  { id: '5', title: 'Terms & Conditions', icon: '📄', action: () => Alert.alert('Terms & Conditions', 'Feature coming soon!') },
+                  { id: '6', title: 'Privacy Policy', icon: '🛡️', action: () => Alert.alert('Privacy Policy', 'Feature coming soon!') },
+                  { id: '7', title: 'Rate App', icon: '⭐', action: () => Alert.alert('Rate App', 'Feature coming soon!') },
+                  { id: '8', title: 'Share App', icon: '📤', action: () => Alert.alert('Share App', 'Feature coming soon!') },
+                  { id: '9', title: 'Logout', icon: '🚪', action: () => Alert.alert('Logout', 'Are you sure you want to logout?', [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Logout', onPress: () => navigation.navigate('Welcome') }
                   ]) },

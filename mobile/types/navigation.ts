@@ -9,4 +9,20 @@ export type RootStackParamList = {
   AISymptoms: undefined;
   MedicalRecords: undefined;
   Emergency: undefined;
+  Main: undefined;
+  // Enhanced Features
+  MultilingualSymptomChecker: undefined;
+  ABHAIntegration: undefined;
+  Teleconsultation: {
+    doctorId: string;
+    doctorName: string;
+    appointmentId: string;
+    consultationType: 'video' | 'audio' | 'chat';
+  };
+  LowBandwidthOptimization: undefined;
+  ConsultationSummary: {
+    appointmentId: string;
+    duration: number;
+    doctorName: string;
+  };
 };

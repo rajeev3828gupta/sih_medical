@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Inventory Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #1e293b;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #ecfdf5;
+            border-radius: 20px;
+            color: #059669;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .stat-card.low-stock .value {
+            color: #f59e0b;
+        }
+
+        .stat-card.out-of-stock .value {
+            color: #ef4444;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .inventory-table {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: #f1f5f9;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .refresh-btn {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .refresh-btn:hover {
+            background: #0284c7;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            font-size: 14px;
+        }
+
+        td {
+            font-size: 14px;
+        }
+
+        .stock-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .stock-status.in-stock {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .stock-status.low-stock {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .stock-status.out-of-stock {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .activity-panel {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .activity-panel h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+        }
+
+        .activity-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .activity-details {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .update-form {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            border-top-color: #0ea5e9;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🏪 Pharmacy Inventory Dashboard</h1>
+            <div class="status-indicator">
+                <span id="connectionStatus">🟢 Live Updates Active</span>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <h3>Total Medicines</h3>
+                <div class="value" id="totalMedicines">-</div>
+            </div>
+            <div class="stat-card low-stock">
+                <h3>Low Stock Alerts</h3>
+                <div class="value" id="lowStockCount">-</div>
+            </div>
+            <div class="stat-card out-of-stock">
+                <h3>Out of Stock</h3>
+                <div class="value" id="outOfStockCount">-</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Inventory Table -->
+            <div class="inventory-table">
+                <div class="table-header">
+                    <h2>Medicine Inventory</h2>
+                    <button class="refresh-btn" onclick="refreshInventory()">
+                        <span id="refreshIcon">🔄</span> Refresh
+                    </button>
+                </div>
+                <table id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Stock</th>
+                            <th>Min. Threshold</th>
+                            <th>Status</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">
+                                <div class="loading"></div>
+                                <div style="margin-top: 12px;">Loading inventory...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Activity Panel -->
+            <div class="activity-panel">
+                <h2>📊 Recent Activity</h2>
+                <div id="activityList">
+                    <div style="text-align: center; padding: 20px; color: #64748b;">
+                        <div class="loading"></div>
+                        <div style="margin-top: 12px;">Loading activity...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Update Form -->
+        <div class="update-form">
+            <h2>📦 Update Stock</h2>
+            <form id="stockUpdateForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label for="medicineSelect">Medicine</label>
+                        <select id="medicineSelect" required>
+                            <option value="">Select a medicine...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantityInput">Quantity</label>
+                        <input type="number" id="quantityInput" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="actionSelect">Action</label>
+                        <select id="actionSelect" required>
+                            <option value="restock">Add Stock (Restock)</option>
+                            <option value="sale">Record Sale</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update Stock</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <span id="notificationText"></span>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:3001/api/inventory';
+        const WS_URL = 'ws://localhost:3001/ws/inventory';
+        const PHARMACY_ID = 'pharmacy_1';
+
+        // Global state
+        let medicines = [];
+        let ws = null;
+        let activityLog = [];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeWebSocket();
+            loadInventory();
+            populateMedicineSelect();
+            
+            // Set up form submission
+            document.getElementById('stockUpdateForm').addEventListener('submit', handleStockUpdate);
+        });
+
+        // WebSocket connection
+        function initializeWebSocket() {
+            try {
+                ws = new WebSocket(WS_URL);
+                
+                ws.onopen = function() {
+                    console.log('WebSocket connected');
+                    updateConnectionStatus('connected');
+                    
+                    // Subscribe to pharmacy updates
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        pharmacyId: PHARMACY_ID
+                    }));
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('WebSocket message error:', error);
+                    }
+                };
+
+                ws.onclose = function() {
+                    console.log('WebSocket disconnected');
+                    updateConnectionStatus('disconnected');
+                    
+                    // Reconnect after 3 seconds
+                    setTimeout(initializeWebSocket, 3000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus('error');
+                };
+            } catch (error) {
+                console.error('WebSocket initialization error:', error);
+                updateConnectionStatus('error');
+            }
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(message) {
+            switch (message.type) {
+                case 'inventory_update':
+                    handleInventoryUpdate(message.data);
+                    break;
+                case 'connection_status':
+                    console.log('Connection status:', message.data);
+                    break;
+                default:
+                    console.log('Unknown message type:', message.type);
+            }
+        }
+
+        // Handle real-time inventory updates
+        function handleInventoryUpdate(update) {
+            console.log('Inventory update received:', update);
+            
+            // Update local medicines data
+            medicines = medicines.map(medicine => {
+                if (medicine.id === update.medicineId) {
+                    return {
+                        ...medicine,
+                        stock: update.remainingStock,
+                        inStock: update.remainingStock > 0,
+                        lowStock: update.remainingStock <= medicine.minimumThreshold,
+                        lastUpdated: update.timestamp
+                    };
+                }
+                return medicine;
+            });
+
+            // Update UI
+            updateInventoryTable();
+            updateStatistics();
+            
+            // Add to activity log
+            addActivity({
+                type: update.type || 'update',
+                medicine: update.medicineName || 'Unknown Medicine',
+                quantity: update.quantitySold || update.quantityAdded,
+                remaining: update.remainingStock,
+                timestamp: update.timestamp
+            });
+
+            // Show notification
+            showNotification(`${update.medicineName || 'Medicine'} stock updated: ${update.remainingStock} remaining`);
+        }
+
+        // Load inventory from API
+        async function loadInventory() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/medicines/${PHARMACY_ID}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    medicines = data.medicines;
+                    updateInventoryTable();
+                    updateStatistics();
+                } else {
+                    throw new Error(data.error || 'Failed to load inventory');
+                }
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                showNotification('Failed to load inventory', 'error');
+            }
+        }
+
+        // Update inventory table
+        function updateInventoryTable() {
+            const tbody = document.getElementById('inventoryTableBody');
+            
+            if (medicines.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px;">
+                            No medicines found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = medicines.map(medicine => `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">${medicine.name}</div>
+                        <div style="font-size: 12px; color: #64748b;">${medicine.manufacturer}</div>
+                    </td>
+                    <td style="font-weight: 600;">${medicine.stock}</td>
+                    <td>${medicine.minimumThreshold}</td>
+                    <td>
+                        <span class="stock-status ${getStockStatusClass(medicine)}">
+                            ${getStockStatusText(medicine)}
+                        </span>
+                    </td>
+                    <td style="font-size: 12px;">
+                        ${new Date(medicine.lastUpdated).toLocaleString()}
+                    </td>
+                    <td>
+                        <button onclick="quickRestock('${medicine.id}')" class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;">
+                            Quick +10
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const total = medicines.length;
+            const lowStock = medicines.filter(m => m.lowStock && m.inStock).length;
+            const outOfStock = medicines.filter(m => !m.inStock).length;
+
+            document.getElementById('totalMedicines').textContent = total;
+            document.getElementById('lowStockCount').textContent = lowStock;
+            document.getElementById('outOfStockCount').textContent = outOfStock;
+        }
+
+        // Get stock status class
+        function getStockStatusClass(medicine) {
+            if (!medicine.inStock) return 'out-of-stock';
+            if (medicine.lowStock) return 'low-stock';
+            return 'in-stock';
+        }
+
+        // Get stock status text
+        function getStockStatusText(medicine) {
+            if (!medicine.inStock) return 'Out of Stock';
+            if (medicine.lowStock) return 'Low Stock';
+            return 'In Stock';
+        }
+
+        // Handle stock update form submission
+        async function handleStockUpdate(event) {
+            event.preventDefault();
+            
+            const medicineId = document.getElementById('medicineSelect').value;
+            const quantity = parseInt(document.getElementById('quantityInput').value);
+            const action = document.getElementById('actionSelect').value;
+
+            if (!medicineId || !quantity) {
+                showNotification('Please fill all required fields', 'error');
+                return;
+            }
+
+            try {
+                const endpoint = action === 'restock' ? 'restock' : 'sale-notification';
+                const payload = {
+                    pharmacyId: PHARMACY_ID,
+                    medicineId: medicineId,
+                    [action === 'restock' ? 'quantityAdded' : 'quantitySold']: quantity,
+                    staffId: 'dashboard_user'
+                };
+
+                const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(`Stock ${action} recorded successfully`);
+                    resetForm();
+                    // The real-time update will handle UI refresh
+                } else {
+                    throw new Error(data.error || 'Failed to update stock');
+                }
+            } catch (error) {
+                console.error('Stock update error:', error);
+                showNotification(`Failed to ${action} stock: ${error.message}`, 'error');
+            }
+        }
+
+        // Quick restock function
+        async function quickRestock(medicineId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/restock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pharmacyId: PHARMACY_ID,
+                        medicineId: medicineId,
+                        quantityAdded: 10,
+                        staffId: 'dashboard_user'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Added 10 units to stock');
+                } else {
+                    throw new Error(data.error || 'Failed to restock');
+                }
+            } catch (error) {
+                console.error('Quick restock error:', error);
+                showNotification('Failed to restock', 'error');
+            }
+        }
+
+        // Populate medicine select dropdown
+        function populateMedicineSelect() {
+            const select = document.getElementById('medicineSelect');
+            select.innerHTML = '<option value="">Select a medicine...</option>';
+            
+            medicines.forEach(medicine => {
+                const option = document.createElement('option');
+                option.value = medicine.id;
+                option.textContent = `${medicine.name} (Current: ${medicine.stock})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('stockUpdateForm').reset();
+        }
+
+        // Refresh inventory
+        function refreshInventory() {
+            const icon = document.getElementById('refreshIcon');
+            icon.innerHTML = '<div class="loading"></div>';
+            
+            loadInventory().finally(() => {
+                icon.textContent = '🔄';
+                populateMedicineSelect();
+            });
+        }
+
+        // Update connection status
+        function updateConnectionStatus(status) {
+            const element = document.getElementById('connectionStatus');
+            switch (status) {
+                case 'connected':
+                    element.textContent = '🟢 Live Updates Active';
+                    break;
+                case 'disconnected':
+                    element.textContent = '🟡 Reconnecting...';
+                    break;
+                case 'error':
+                    element.textContent = '🔴 Connection Error';
+                    break;
+            }
+        }
+
+        // Add activity to log
+        function addActivity(activity) {
+            activityLog.unshift({
+                ...activity,
+                id: Date.now(),
+                timestamp: activity.timestamp || new Date().toISOString()
+            });
+
+            // Keep only last 10 activities
+            if (activityLog.length > 10) {
+                activityLog = activityLog.slice(0, 10);
+            }
+
+            updateActivityList();
+        }
+
+        // Update activity list
+        function updateActivityList() {
+            const container = document.getElementById('activityList');
+            
+            if (activityLog.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #64748b;">
+                        No recent activity
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = activityLog.map(activity => `
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-title">
+                            ${activity.type === 'sale' ? '🛒' : '📦'} 
+                            ${activity.medicine}
+                        </div>
+                        <div class="activity-details">
+                            ${activity.type === 'sale' ? 'Sold' : 'Added'} ${activity.quantity} units
+                            • ${activity.remaining} remaining
+                        </div>
+                    </div>
+                    <div class="activity-time">
+                        ${new Date(activity.timestamp).toLocaleTimeString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notificationText');
+            
+            text.textContent = message;
+            notification.style.background = type === 'error' ? '#ef4444' : '#10b981';
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
