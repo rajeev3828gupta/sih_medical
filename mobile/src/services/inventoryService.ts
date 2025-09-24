@@ -2,14 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Medicine, Pharmacy, InventoryUpdate, WebSocketMessage } from '../types/inventory';
 
 const API_BASE_URL = __DEV__ ? 'http://localhost:3001' : 'https://your-production-api.com';
-const WS_BASE_URL = __DEV__ ? 'ws://localhost:3001' : 'wss://your-production-api.com';
+// const WS_BASE_URL = __DEV__ ? 'ws://localhost:3001' : 'wss://your-production-api.com';
 
 export class InventoryService {
-  private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
-  private isConnecting = false;
+  // private ws: WebSocket | null = null;
+  // private reconnectAttempts = 0;
+  // private maxReconnectAttempts = 5;
+  // private reconnectDelay = 1000;
+  // private isConnecting = false;
   private subscribers: ((update: InventoryUpdate) => void)[] = [];
   private currentPharmacyId: string | null = null;
 
@@ -21,10 +21,12 @@ export class InventoryService {
   };
 
   constructor() {
-    this.initializeConnection();
+    // Temporarily disabled WebSocket connection
+    // this.initializeConnection();
   }
 
-  // Initialize WebSocket connection
+  // Initialize WebSocket connection - TEMPORARILY DISABLED
+  /* 
   private async initializeConnection() {
     if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) {
       return;
@@ -73,8 +75,10 @@ export class InventoryService {
       this.handleReconnection();
     }
   }
+  */
 
-  // Handle WebSocket messages
+  // Handle WebSocket messages - TEMPORARILY DISABLED
+  /*
   private handleWebSocketMessage(message: WebSocketMessage) {
     switch (message.type) {
       case 'inventory_update':
@@ -124,17 +128,32 @@ export class InventoryService {
       console.error('❌ Max reconnection attempts reached');
     }
   }
+  */
 
-  // Subscribe to pharmacy updates
+  // Handle inventory updates - Simplified version without WebSocket
+  private async handleInventoryUpdate(update: InventoryUpdate) {
+    console.log('📦 Inventory update received:', update);
+    
+    // Update cached medicines
+    await this.updateCachedMedicine(update);
+    
+    // Notify subscribers
+    this.subscribers.forEach(callback => callback(update));
+  }
+
+  // Subscribe to pharmacy updates - TEMPORARILY DISABLED
   public subscribeToPharmacy(pharmacyId: string) {
     this.currentPharmacyId = pharmacyId;
     
+    // WebSocket functionality temporarily disabled
+    /*
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
         type: 'subscribe',
         pharmacyId
       }));
     }
+    */
   }
 
   // Subscribe to inventory updates
@@ -346,17 +365,22 @@ export class InventoryService {
     }
   }
 
-  // Check connection status
+  // Check connection status - TEMPORARILY DISABLED
   public isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    // WebSocket temporarily disabled, return false
+    return false;
+    // return this.ws?.readyState === WebSocket.OPEN;
   }
 
-  // Disconnect WebSocket
+  // Disconnect WebSocket - TEMPORARILY DISABLED
   public disconnect() {
+    // WebSocket functionality temporarily disabled
+    /*
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
+    */
     this.subscribers = [];
     this.currentPharmacyId = null;
   }

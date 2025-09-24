@@ -13,6 +13,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import AnimatedButton from '../components/AnimatedButton';
+import { useAuth } from '../contexts/AuthContext';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -21,6 +22,7 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+    const { login } = useAuth();
     const [loginMethod, setLoginMethod] = React.useState<'phone' | 'credentials'>('phone');
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
@@ -108,11 +110,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       }
   
       setIsLoading(true);
-      // Simulate OTP verification
-      setTimeout(() => {
-        setIsLoading(false);
+      // Simulate OTP verification and login with phone number as username
+      const success = await login(phoneNumber, 'otp_verified');
+      setIsLoading(false);
+      
+      if (success) {
         navigation.navigate('Dashboard');
-      }, 1000);
+      } else {
+        Alert.alert('Login Failed', 'Invalid OTP. Please try again.');
+      }
     };
   
     return (
@@ -312,6 +318,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   placeholderTextColor="#6b7280"
                   value={username}
                   onChangeText={setUsername}
+                  autoCapitalize="none"
                 />
                 <Text style={styles.inputLabel}>Password</Text>
                 <TextInput
@@ -322,14 +329,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   onChangeText={setPassword}
                   secureTextEntry
                 />
+                
+                <View style={styles.adminHintContainer}>
+                  <Text style={styles.adminHintText}>
+                    💡 Admin Access: Use admin@sihmedical.com / admin123
+                  </Text>
+                </View>
                 <AnimatedButton
                   style={[styles.primaryButton, isLoading && styles.disabledButton]}
-                  onPress={() => {
+                  onPress={async () => {
+                    if (!username || !password) {
+                      Alert.alert('Error', 'Please enter both email and password');
+                      return;
+                    }
+                    
                     setIsLoading(true);
-                    setTimeout(() => {
-                      setIsLoading(false);
+                    const success = await login(username, password);
+                    setIsLoading(false);
+                    
+                    if (success) {
                       navigation.navigate('Dashboard');
-                    }, 1000);
+                    } else {
+                      Alert.alert('Login Failed', 'Invalid credentials. Please try again.\n\nAdmin Login:\nUsername: admin\nPassword: admin123');
+                    }
                   }}
                   disabled={isLoading}
                 >
@@ -708,6 +730,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         color: '#0f766e',
         fontSize: 16,
         fontWeight: '600',
+      },
+      adminHintContainer: {
+        marginTop: 12,
+        padding: 12,
+        backgroundColor: '#f0f9ff',
+        borderRadius: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#0ea5e9',
+      },
+      adminHintText: {
+        fontSize: 12,
+        color: '#0369a1',
+        fontWeight: '500',
+        textAlign: 'center',
       },
 });
 

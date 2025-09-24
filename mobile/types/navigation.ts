@@ -10,6 +10,7 @@ export type RootStackParamList = {
   MedicalRecords: undefined;
   Emergency: undefined;
   Main: undefined;
+  AdminPanel: undefined;
   // Enhanced Features
   MultilingualSymptomChecker: undefined;
   ABHAIntegration: undefined;
@@ -25,4 +26,15 @@ export type RootStackParamList = {
     duration: number;
     doctorName: string;
   };
+  // Rural Healthcare Features
+  AISymptomChecker: undefined;
+  // FHIR Integration
+  GovernmentIntegration: undefined;
+  FHIRDataViewer: undefined;
+  FHIRDemo: undefined;
+  OfflineHealthRecords: undefined;
+  VillageHealthNetwork: undefined;
+  TelemedicineSystem: undefined;
+  MedicineAvailabilityTracker: undefined;
+  CHWDashboard: undefined;
 };

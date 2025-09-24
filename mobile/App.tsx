@@ -7,10 +7,13 @@ import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
 // Import types and screens
 import { RootStackParamList } from './types/navigation';
+import { AuthProvider } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegistrationScreen from './screens/RegistrationScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import PatientDashboard from './screens/PatientDashboard';
 import ConsultationScreen from './screens/ConsultationScreen';
 import AppointmentScreen from './screens/AppointmentScreen';
 import AISymptomsScreen from './screens/AISymptomsScreen';
@@ -18,11 +21,19 @@ import MedicalRecordsScreen from './screens/MedicalRecordsScreen';
 import EmergencyScreen from './screens/EmergencyScreen';
 import PharmacyScreen from './screens/PharmacyScreen';
 
-// Enhanced Feature Screens
+// Enhanced Rural Healthcare Features
+import AISymptomChecker from './screens/AISymptomChecker';
+import OfflineHealthRecords from './screens/OfflineHealthRecords';
+import VillageHealthNetwork from './screens/VillageHealthNetwork';
+import TelemedicineSystem from './screens/TelemedicineSystem';
+import MedicineAvailabilityTracker from './screens/MedicineAvailabilityTracker';
+
+// Other Enhanced Feature Screens
 import MultilingualSymptomChecker from './screens/MultilingualSymptomChecker';
 import ABHAIntegration from './screens/ABHAIntegration';
 import Teleconsultation from './screens/Teleconsultation';
 import LowBandwidthOptimization from './screens/LowBandwidthOptimization';
+import AdminPanel from './screens/AdminPanel';
 
 // Global variable to store dashboard modal functions
 let dashboardModalFunctions: {
@@ -67,14 +78,16 @@ const ConsultationSummaryScreen = ({ route, navigation }: any) => {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName="Welcome"
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
+    <LanguageProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName="Welcome"
+            screenOptions={{
+              headerShown: false,
+            }}
+          >
           <Stack.Screen 
             name="Welcome" 
             component={WelcomeScreen} 
@@ -191,6 +204,39 @@ export default function App() {
             options={{ headerShown: true, title: 'Network Settings' }}
           />
           <Stack.Screen 
+            name="AdminPanel" 
+            component={AdminPanel} 
+            options={{ headerShown: false }}
+          />
+          
+          {/* Rural Healthcare Features */}
+          <Stack.Screen 
+            name="AISymptomChecker" 
+            component={AISymptomChecker} 
+            options={{ headerShown: true, title: 'AI Symptom Checker' }}
+          />
+          <Stack.Screen 
+            name="OfflineHealthRecords" 
+            component={OfflineHealthRecords} 
+            options={{ headerShown: true, title: 'Health Records' }}
+          />
+          <Stack.Screen 
+            name="VillageHealthNetwork" 
+            component={VillageHealthNetwork} 
+            options={{ headerShown: true, title: 'Village Health Network' }}
+          />
+          <Stack.Screen 
+            name="TelemedicineSystem" 
+            component={TelemedicineSystem} 
+            options={{ headerShown: true, title: 'Telemedicine' }}
+          />
+          <Stack.Screen 
+            name="MedicineAvailabilityTracker" 
+            component={MedicineAvailabilityTracker} 
+            options={{ headerShown: true, title: 'Medicine Tracker' }}
+          />
+          
+          <Stack.Screen 
             name="ConsultationSummary" 
             component={ConsultationSummaryScreen} 
             options={{ headerShown: true, title: 'Consultation Summary' }}
@@ -199,6 +245,8 @@ export default function App() {
         <StatusBar style="light" />
       </NavigationContainer>
     </QueryClientProvider>
+    </AuthProvider>
+    </LanguageProvider>
   );
 }
 

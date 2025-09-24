@@ -9,9 +9,12 @@ import {
   Linking,
   Dimensions,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type EmergencyScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'Emergency'>;
@@ -21,8 +24,11 @@ const { width } = Dimensions.get('window');
 
 const EmergencyScreen: React.FC<EmergencyScreenProps> = ({ navigation }) => {
   const [emergencyMode, setEmergencyMode] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<'emergency' | 'hospitals' | 'firstaid' | 'contacts'>('emergency');
+  const [selectedTab, setSelectedTab] = useState<'emergency' | 'hospitals' | 'firstaid' | 'contacts' | 'traditional' | 'offline'>('emergency');
   const [countdown, setCountdown] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
+  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [offlineData, setOfflineData] = useState<any>(null);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -256,6 +262,121 @@ const EmergencyScreen: React.FC<EmergencyScreenProps> = ({ navigation }) => {
       ],
       warnings: ['Symptoms can worsen quickly', 'Second reactions can occur']
     },
+  ];
+
+  const traditionalMedicine = [
+    {
+      title: 'Ayurvedic First Aid',
+      icon: '🌿',
+      category: 'Ayurveda',
+      remedies: [
+        {
+          condition: 'Common Cold & Cough',
+          ingredients: ['Tulsi (Holy Basil) leaves', 'Ginger', 'Honey'],
+          preparation: 'Boil tulsi leaves and ginger in water, add honey',
+          usage: 'Drink 2-3 times daily',
+          duration: '3-5 days'
+        },
+        {
+          condition: 'Digestive Issues',
+          ingredients: ['Cumin seeds', 'Coriander seeds', 'Fennel seeds'],
+          preparation: 'Mix equal parts and boil in water',
+          usage: 'Drink after meals',
+          duration: 'As needed'
+        },
+        {
+          condition: 'Minor Burns',
+          ingredients: ['Aloe Vera gel', 'Turmeric powder'],
+          preparation: 'Mix aloe vera with turmeric',
+          usage: 'Apply on affected area',
+          duration: 'Until healed'
+        }
+      ]
+    },
+    {
+      title: 'Homeopathic Remedies',
+      icon: '💊',
+      category: 'Homeopathy',
+      remedies: [
+        {
+          condition: 'Anxiety & Panic',
+          ingredients: 'Rescue Remedy (Bach Flower)',
+          preparation: 'Ready to use liquid',
+          usage: '4 drops under tongue',
+          duration: 'As needed'
+        },
+        {
+          condition: 'Minor Injuries',
+          ingredients: 'Arnica Montana 30C',
+          preparation: 'Homeopathic pellets',
+          usage: '5 pellets every 4 hours',
+          duration: '2-3 days'
+        }
+      ]
+    },
+    {
+      title: 'Traditional Rural Remedies',
+      icon: '🏘️',
+      category: 'Folk Medicine',
+      remedies: [
+        {
+          condition: 'Snake Bite (First Aid)',
+          ingredients: ['Tourniquet', 'Clean cloth'],
+          preparation: 'Apply tight bandage above bite',
+          usage: 'Immobilize and seek medical help',
+          duration: 'Immediate'
+        },
+        {
+          condition: 'Stomach Pain',
+          ingredients: ['Ajwain (Carom seeds)', 'Salt'],
+          preparation: 'Roast ajwain and mix with salt',
+          usage: 'Take with warm water',
+          duration: 'As needed'
+        }
+      ]
+    }
+  ];
+
+  const offlineProtocols = [
+    {
+      title: 'Offline Emergency Kit',
+      icon: '🎒',
+      items: [
+        'First Aid Kit with bandages, antiseptics',
+        'Emergency medications (pain relievers, etc.)',
+        'Flashlight with extra batteries',
+        'Portable phone charger',
+        'Emergency contact list (printed)',
+        'Water purification tablets',
+        'Non-perishable food items',
+        'Blankets and warm clothing'
+      ],
+      instructions: 'Keep kit updated and accessible'
+    },
+    {
+      title: 'Offline Communication',
+      icon: '📻',
+      methods: [
+        'SMS for emergency (works with minimal signal)',
+        'Emergency radio if available',
+        'Signal flares or whistle',
+        'Written notes to neighbors',
+        'Pre-arranged meeting points'
+      ],
+      instructions: 'Establish backup communication methods'
+    },
+    {
+      title: 'Power Outage Protocol',
+      icon: '⚡',
+      steps: [
+        'Conserve phone battery',
+        'Use offline maps and data',
+        'Have backup light sources',
+        'Keep emergency numbers memorized',
+        'Monitor local news via radio'
+      ],
+      instructions: 'Prepare for extended outages'
+    }
   ];
 
   const handleEmergencyCall = (number: string, name: string) => {
@@ -512,6 +633,95 @@ const EmergencyScreen: React.FC<EmergencyScreenProps> = ({ navigation }) => {
     </View>
   );
 
+  const renderTraditionalMedicine = (medicine: any) => (
+    <View key={medicine.title} style={styles.traditionalCard}>
+      <View style={styles.traditionalHeader}>
+        <Text style={styles.traditionalIcon}>{medicine.icon}</Text>
+        <View style={styles.traditionalInfo}>
+          <Text style={styles.traditionalTitle}>{medicine.title}</Text>
+          <Text style={styles.traditionalCategory}>{medicine.category}</Text>
+        </View>
+      </View>
+
+      <View style={styles.remediesContainer}>
+        <Text style={styles.remediesLabel}>🌿 Available Remedies:</Text>
+        {medicine.remedies.map((remedy: any, index: number) => (
+          <View key={index} style={styles.remedyItem}>
+            <View style={styles.remedyHeader}>
+              <Text style={styles.remedyCondition}>{remedy.condition}</Text>
+              <Text style={styles.remedyDuration}>⏱️ {remedy.duration}</Text>
+            </View>
+
+            <View style={styles.remedyDetails}>
+              <View style={styles.remedySection}>
+                <Text style={styles.remedyLabel}>🥗 Ingredients:</Text>
+                <Text style={styles.remedyText}>{remedy.ingredients.join(', ')}</Text>
+              </View>
+
+              <View style={styles.remedySection}>
+                <Text style={styles.remedyLabel}>🔬 Preparation:</Text>
+                <Text style={styles.remedyText}>{remedy.preparation}</Text>
+              </View>
+
+              <View style={styles.remedySection}>
+                <Text style={styles.remedyLabel}>📋 Usage:</Text>
+                <Text style={styles.remedyText}>{remedy.usage}</Text>
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderOfflineProtocol = (protocol: any) => (
+    <View key={protocol.title} style={styles.offlineCard}>
+      <View style={styles.offlineHeader}>
+        <Text style={styles.offlineIcon}>{protocol.icon}</Text>
+        <View style={styles.offlineInfo}>
+          <Text style={styles.offlineTitle}>{protocol.title}</Text>
+          <Text style={styles.offlineInstructions}>{protocol.instructions}</Text>
+        </View>
+      </View>
+
+      {protocol.items && (
+        <View style={styles.offlineSection}>
+          <Text style={styles.offlineLabel}>📦 Essential Items:</Text>
+          {protocol.items.map((item: string, index: number) => (
+            <View key={index} style={styles.offlineItem}>
+              <Text style={styles.offlineBullet}>•</Text>
+              <Text style={styles.offlineItemText}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {protocol.methods && (
+        <View style={styles.offlineSection}>
+          <Text style={styles.offlineLabel}>📡 Communication Methods:</Text>
+          {protocol.methods.map((method: string, index: number) => (
+            <View key={index} style={styles.offlineItem}>
+              <Text style={styles.offlineBullet}>•</Text>
+              <Text style={styles.offlineItemText}>{method}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {protocol.steps && (
+        <View style={styles.offlineSection}>
+          <Text style={styles.offlineLabel}>📋 Protocol Steps:</Text>
+          {protocol.steps.map((step: string, index: number) => (
+            <View key={index} style={styles.offlineItem}>
+              <Text style={styles.offlineStepNumber}>{index + 1}</Text>
+              <Text style={styles.offlineItemText}>{step}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {/* Emergency Mode Indicator */}
@@ -543,38 +753,56 @@ const EmergencyScreen: React.FC<EmergencyScreenProps> = ({ navigation }) => {
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'emergency' && styles.activeTab]}
-          onPress={() => setSelectedTab('emergency')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'emergency' && styles.activeTabText]}>
-            🚨 Emergency
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'hospitals' && styles.activeTab]}
-          onPress={() => setSelectedTab('hospitals')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'hospitals' && styles.activeTabText]}>
-            🏥 Hospitals
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'firstaid' && styles.activeTab]}
-          onPress={() => setSelectedTab('firstaid')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'firstaid' && styles.activeTabText]}>
-            🩹 First Aid
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'contacts' && styles.activeTab]}
-          onPress={() => setSelectedTab('contacts')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'contacts' && styles.activeTabText]}>
-            👤 Contacts
-          </Text>
-        </TouchableOpacity>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContainer}>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'emergency' && styles.activeTab]}
+            onPress={() => setSelectedTab('emergency')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'emergency' && styles.activeTabText]}>
+              🚨 Emergency
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'hospitals' && styles.activeTab]}
+            onPress={() => setSelectedTab('hospitals')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'hospitals' && styles.activeTabText]}>
+              🏥 Hospitals
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'firstaid' && styles.activeTab]}
+            onPress={() => setSelectedTab('firstaid')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'firstaid' && styles.activeTabText]}>
+              🩹 First Aid
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'contacts' && styles.activeTab]}
+            onPress={() => setSelectedTab('contacts')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'contacts' && styles.activeTabText]}>
+              👤 Contacts
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'traditional' && styles.activeTab]}
+            onPress={() => setSelectedTab('traditional')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'traditional' && styles.activeTabText]}>
+              🌿 Traditional
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'offline' && styles.activeTab]}
+            onPress={() => setSelectedTab('offline')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'offline' && styles.activeTabText]}>
+              📴 Offline
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       {/* Content */}
@@ -681,12 +909,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabContainer: {
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+  },
+  tabScrollContainer: {
+    flexDirection: 'row',
+    gap: 8,
   },
   tab: {
     flex: 1,
@@ -1092,6 +1323,171 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#991B1B',
     lineHeight: 18,
+  },
+  traditionalContent: {
+    gap: 16,
+    paddingBottom: 20,
+  },
+  traditionalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  traditionalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  traditionalIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  traditionalInfo: {
+    flex: 1,
+  },
+  traditionalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  traditionalCategory: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  remediesContainer: {
+    gap: 16,
+  },
+  remediesLabel: {
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  remedyItem: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+  },
+  remedyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  remedyCondition: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  remedyDuration: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  remedyDetails: {
+    gap: 12,
+  },
+  remedySection: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8,
+  },
+  remedyLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  remedyText: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+  },
+  offlineContent: {
+    gap: 16,
+    paddingBottom: 20,
+  },
+  offlineCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  offlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  offlineIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  offlineInfo: {
+    flex: 1,
+  },
+  offlineTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  offlineInstructions: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  offlineSection: {
+    marginBottom: 16,
+  },
+  offlineLabel: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  offlineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  offlineBullet: {
+    fontSize: 14,
+    color: '#64748B',
+    marginRight: 8,
+    marginTop: 2,
+  },
+  offlineItemText: {
+    fontSize: 14,
+    color: '#64748B',
+    flex: 1,
+    lineHeight: 20,
+  },
+  offlineStepNumber: {
+    backgroundColor: '#0EA5E9',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginRight: 12,
+    marginTop: 2,
   },
 });
 
