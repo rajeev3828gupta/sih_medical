@@ -18,6 +18,10 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { RegistrationApprovalService, PendingRegistration } from '../services/RegistrationApprovalService';
+import NotificationService from '../services/NotificationService';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 type AdminPanelProps = {
   navigation: StackNavigationProp<RootStackParamList, 'AdminPanel'>;
@@ -57,8 +61,9 @@ interface SystemStats {
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const [selectedTab, setSelectedTab] = useState<'dashboard' | 'requests' | 'users' | 'system'>('dashboard');
-  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([]);
+  const [registrationRequests, setRegistrationRequests] = useState<PendingRegistration[]>([]);
   const [users, setUsers] = useState<UserManagement[]>([]);
   const [systemStats, setSystemStats] = useState<SystemStats>({
     totalUsers: 0,
@@ -69,10 +74,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
     systemHealth: 'good'
   });
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<PendingRegistration | null>(null);
   const [requestModalVisible, setRequestModalVisible] = useState(false);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [requestFilter, setRequestFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
   useEffect(() => {
     loadData();
@@ -80,45 +86,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
 
   const loadData = async () => {
     try {
-      // Mock data - replace with actual API calls
-      const mockRequests: RegistrationRequest[] = [
-        {
-          id: '1',
-          name: 'Dr. Arun Kumar',
-          phone: '+91 98765 43210',
-          email: 'arun.kumar@email.com',
-          role: 'doctor',
-          specialty: 'Cardiology',
-          license: 'MCI-12345',
-          address: 'Patiala, Punjab',
-          requestDate: '2025-09-20',
-          status: 'pending',
-          documents: ['medical_license.pdf', 'id_proof.pdf']
-        },
-        {
-          id: '2',
-          name: 'City Medical Store',
-          phone: '+91 99887 76655',
-          email: 'citymedical@email.com',
-          role: 'pharmacy',
-          license: 'PHARM-6789',
-          address: 'Nabha, Punjab',
-          requestDate: '2025-09-19',
-          status: 'pending',
-          documents: ['pharmacy_license.pdf', 'gst_certificate.pdf']
-        },
-        {
-          id: '3',
-          name: 'Rajesh Sharma',
-          phone: '+91 88776 65544',
-          email: 'rajesh.sharma@email.com',
-          role: 'patient',
-          address: 'Nabha, Punjab',
-          requestDate: '2025-09-18',
-          status: 'approved',
-          documents: ['id_proof.pdf']
-        }
-      ];
+      // Load actual registration requests from service
+      const pendingRequests = await RegistrationApprovalService.getPendingRegistrations();
+      setRegistrationRequests(pendingRequests);
 
       const mockUsers: UserManagement[] = [
         {
@@ -150,13 +120,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
       const mockStats: SystemStats = {
         totalUsers: 1247,
         activeUsers: 89,
-        pendingRequests: 15,
+        pendingRequests: pendingRequests.filter(req => req.status === 'pending').length,
         totalConsultations: 3456,
         todayConsultations: 23,
         systemHealth: 'good'
       };
 
-      setRegistrationRequests(mockRequests);
       setUsers(mockUsers);
       setSystemStats(mockStats);
     } catch (error) {
@@ -170,17 +139,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleRequestAction = (requestId: string, action: 'approve' | 'reject') => {
-    setRegistrationRequests(prev => 
-      prev.map(req => 
-        req.id === requestId 
-          ? { ...req, status: action === 'approve' ? 'approved' : 'rejected' }
-          : req
-      )
-    );
+  const handleRequestAction = async (requestId: string, action: 'approve' | 'reject') => {
+    try {
+      if (action === 'approve') {
+        const result = await RegistrationApprovalService.approveRegistration(requestId, 'admin');
+        if (result && result.generatedCredentials) {
+          Alert.alert(
+            'Success', 
+            `Registration approved successfully!\n\nCredentials sent to user:\nUsername: ${result.generatedCredentials.username}\nPassword: ${result.generatedCredentials.password}`
+          );
+        } else {
+          Alert.alert('Success', 'Registration approved successfully!');
+        }
+      } else {
+        await RegistrationApprovalService.rejectRegistration(requestId, 'admin', rejectionReason);
+        Alert.alert('Success', 'Registration request rejected successfully');
+      }
+      
+      // Refresh the registration requests list
+      loadData();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process registration request');
+      console.error('Registration action error:', error);
+    }
     
-    const actionText = action === 'approve' ? 'approved' : 'rejected';
-    Alert.alert('Success', `Registration request ${actionText} successfully`);
     setRequestModalVisible(false);
     setActionModalVisible(false);
     setRejectionReason('');
@@ -279,53 +261,132 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
     </ScrollView>
   );
 
-  const renderRegistrationRequests = () => (
-    <ScrollView style={styles.tabContent} refreshControl={
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#dc2626" />
-    }>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📋 Registration Requests</Text>
-        {registrationRequests.map((request) => (
-          <TouchableOpacity
-            key={request.id}
-            style={styles.requestCard}
-            onPress={() => {
-              setSelectedRequest(request);
-              setRequestModalVisible(true);
-            }}
-          >
-            <View style={styles.requestHeader}>
-              <View style={styles.requestInfo}>
-                <Text style={styles.requestName}>{request.name}</Text>
-                <Text style={styles.requestRole}>{request.role.toUpperCase()}</Text>
-              </View>
-              <View style={[
-                styles.statusBadge,
-                { backgroundColor: 
-                  request.status === 'pending' ? '#fef3c7' :
-                  request.status === 'approved' ? '#d1fae5' : '#fee2e2'
-                }
+  const renderRegistrationRequests = () => {
+    // Filter and sort requests
+    const getFilteredRequests = (status: 'pending' | 'approved' | 'rejected') => {
+      return registrationRequests
+        .filter(request => request.status === status)
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()); // Newest first
+    };
+
+    const filteredRequests = getFilteredRequests(requestFilter);
+    const pendingCount = getFilteredRequests('pending').length;
+    const approvedCount = getFilteredRequests('approved').length;
+    const rejectedCount = getFilteredRequests('rejected').length;
+
+    return (
+      <ScrollView style={styles.tabContent} refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#dc2626" />
+      }>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📋 {t('admin.registration_requests')}</Text>
+          
+          {/* Filter Tabs */}
+          <View style={styles.filterTabsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                requestFilter === 'pending' && styles.activeFilterTab,
+                { backgroundColor: requestFilter === 'pending' ? '#fef3c7' : '#f8fafc' }
+              ]}
+              onPress={() => setRequestFilter('pending')}
+            >
+              <Text style={[
+                styles.filterTabText,
+                { color: requestFilter === 'pending' ? '#f59e0b' : '#64748b' }
               ]}>
-                <Text style={[
-                  styles.requestStatusText,
-                  { color:
-                    request.status === 'pending' ? '#f59e0b' :
-                    request.status === 'approved' ? '#10b981' : '#dc2626'
-                  }
-                ]}>
-                  {request.status.toUpperCase()}
-                </Text>
-              </View>
+                ⏳ {t('admin.pending')} ({pendingCount})
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                requestFilter === 'approved' && styles.activeFilterTab,
+                { backgroundColor: requestFilter === 'approved' ? '#d1fae5' : '#f8fafc' }
+              ]}
+              onPress={() => setRequestFilter('approved')}
+            >
+              <Text style={[
+                styles.filterTabText,
+                { color: requestFilter === 'approved' ? '#10b981' : '#64748b' }
+              ]}>
+                ✅ {t('admin.approved')} ({approvedCount})
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                requestFilter === 'rejected' && styles.activeFilterTab,
+                { backgroundColor: requestFilter === 'rejected' ? '#fee2e2' : '#f8fafc' }
+              ]}
+              onPress={() => setRequestFilter('rejected')}
+            >
+              <Text style={[
+                styles.filterTabText,
+                { color: requestFilter === 'rejected' ? '#dc2626' : '#64748b' }
+              ]}>
+                ❌ {t('admin.rejected')} ({rejectedCount})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Requests List */}
+          {filteredRequests.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>
+                {t('admin.no_requests_found')} {t(`admin.${requestFilter}`)}
+              </Text>
             </View>
-            <Text style={styles.requestDetails}>📞 {request.phone}</Text>
-            <Text style={styles.requestDetails}>📧 {request.email}</Text>
-            <Text style={styles.requestDetails}>📍 {request.address}</Text>
-            <Text style={styles.requestDate}>Request Date: {request.requestDate}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
-  );
+          ) : (
+            filteredRequests.map((request) => (
+              <TouchableOpacity
+                key={request.id}
+                style={styles.requestCard}
+                onPress={() => {
+                  setSelectedRequest(request);
+                  setRequestModalVisible(true);
+                }}
+              >
+                <View style={styles.requestHeader}>
+                  <View style={styles.requestInfo}>
+                    <Text style={styles.requestName}>{request.fullName}</Text>
+                    <Text style={styles.requestRole}>{request.role.toUpperCase()}</Text>
+                  </View>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: 
+                      request.status === 'pending' ? '#fef3c7' :
+                      request.status === 'approved' ? '#d1fae5' : '#fee2e2'
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.requestStatusText,
+                      { color:
+                        request.status === 'pending' ? '#f59e0b' :
+                        request.status === 'approved' ? '#10b981' : '#dc2626'
+                      }
+                    ]}>
+                      {request.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.requestDetails}>📞 {request.phone}</Text>
+                <Text style={styles.requestDetails}>📧 {request.email}</Text>
+                <Text style={styles.requestDetails}>
+                  📍 {request.pharmacyData?.pharmacyAddress || request.doctorData?.hospital || 'N/A'}
+                </Text>
+                <Text style={styles.requestDate}>
+                  Request Date: {new Date(request.submittedAt).toLocaleDateString()} at {new Date(request.submittedAt).toLocaleTimeString()}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    );
+  };
 
   const renderUserManagement = () => (
     <ScrollView style={styles.tabContent} refreshControl={
@@ -437,14 +498,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
       {/* Simple Formal Header */}
       <View style={styles.simpleHeader}>
         <View>
-          <Text style={styles.simpleHeaderTitle}>Admin Panel</Text>
-          <Text style={styles.simpleHeaderSubtitle}>Medical Administration</Text>
+          <Text style={styles.simpleHeaderTitle}>{t('admin.title')}</Text>
+          <Text style={styles.simpleHeaderSubtitle}>{t('admin.subtitle')}</Text>
         </View>
         <TouchableOpacity 
           onPress={() => {
-            Alert.alert('Logout', 'Are you sure you want to logout?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Logout', onPress: () => {
+            Alert.alert(t('admin.logout'), t('admin.logout_confirm'), [
+              { text: t('cancel'), style: 'cancel' },
+              { text: t('admin.logout'), onPress: () => {
                 logout();
                 navigation.navigate('Welcome');
               }}
@@ -452,7 +513,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
           }}
           style={styles.simpleLogoutButton}
         >
-          <Text style={styles.simpleLogoutText}>Logout</Text>
+          <Text style={styles.simpleLogoutText}>{t('admin.logout')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -463,7 +524,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
           onPress={() => setSelectedTab('dashboard')}
         >
           <Text style={[styles.tabText, selectedTab === 'dashboard' && styles.activeTabText]}>
-            Dashboard
+            {t('admin.dashboard')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -471,7 +532,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
           onPress={() => setSelectedTab('requests')}
         >
           <Text style={[styles.tabText, selectedTab === 'requests' && styles.activeTabText]}>
-            Requests
+            {t('admin.requests')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -479,7 +540,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
           onPress={() => setSelectedTab('users')}
         >
           <Text style={[styles.tabText, selectedTab === 'users' && styles.activeTabText]}>
-            Users
+            {t('admin.users')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -487,7 +548,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
           onPress={() => setSelectedTab('system')}
         >
           <Text style={[styles.tabText, selectedTab === 'system' && styles.activeTabText]}>
-            System
+            {t('admin.system')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -517,7 +578,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
                 </View>
                 <ScrollView style={styles.modalBody}>
                   <Text style={styles.modalLabel}>Name:</Text>
-                  <Text style={styles.modalValue}>{selectedRequest.name}</Text>
+                  <Text style={styles.modalValue}>{selectedRequest.fullName}</Text>
                   
                   <Text style={styles.modalLabel}>Role:</Text>
                   <Text style={styles.modalValue}>{selectedRequest.role.toUpperCase()}</Text>
@@ -529,26 +590,40 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
                   <Text style={styles.modalValue}>{selectedRequest.email}</Text>
                   
                   <Text style={styles.modalLabel}>Address:</Text>
-                  <Text style={styles.modalValue}>{selectedRequest.address}</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedRequest.pharmacyData?.pharmacyAddress || 
+                     selectedRequest.doctorData?.hospital || 'N/A'}
+                  </Text>
                   
-                  {selectedRequest.specialty && (
+                  {selectedRequest.doctorData && (
                     <>
                       <Text style={styles.modalLabel}>Specialty:</Text>
-                      <Text style={styles.modalValue}>{selectedRequest.specialty}</Text>
+                      <Text style={styles.modalValue}>{selectedRequest.doctorData.specialization}</Text>
+                      <Text style={styles.modalLabel}>Medical License:</Text>
+                      <Text style={styles.modalValue}>{selectedRequest.doctorData.medicalLicense}</Text>
+                      <Text style={styles.modalLabel}>Experience:</Text>
+                      <Text style={styles.modalValue}>{selectedRequest.doctorData.experience}</Text>
                     </>
                   )}
                   
-                  {selectedRequest.license && (
+                  {selectedRequest.pharmacyData && (
                     <>
-                      <Text style={styles.modalLabel}>License:</Text>
-                      <Text style={styles.modalValue}>{selectedRequest.license}</Text>
+                      <Text style={styles.modalLabel}>Pharmacy Name:</Text>
+                      <Text style={styles.modalValue}>{selectedRequest.pharmacyData.pharmacyName}</Text>
+                      <Text style={styles.modalLabel}>Pharmacy License:</Text>
+                      <Text style={styles.modalValue}>{selectedRequest.pharmacyData.pharmacyLicense}</Text>
                     </>
                   )}
                   
-                  <Text style={styles.modalLabel}>Documents:</Text>
-                  {selectedRequest.documents.map((doc, index) => (
-                    <Text key={index} style={styles.documentItem}>📎 {doc}</Text>
-                  ))}
+                  {selectedRequest.adminData && (
+                    <>
+                      <Text style={styles.modalLabel}>Department:</Text>
+                      <Text style={styles.modalValue}>{selectedRequest.adminData.department}</Text>
+                    </>
+                  )}
+                  
+                  <Text style={styles.modalLabel}>Submitted:</Text>
+                  <Text style={styles.modalValue}>{new Date(selectedRequest.submittedAt).toLocaleString()}</Text>
                 </ScrollView>
                 
                 {selectedRequest.status === 'pending' && (
@@ -1678,6 +1753,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     marginBottom: 4,
+  },
+  // Filter tabs styles
+  filterTabsContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    padding: 4,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 2,
+  },
+  activeFilterTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  filterTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

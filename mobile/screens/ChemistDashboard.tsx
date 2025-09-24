@@ -14,6 +14,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type ChemistDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -24,7 +25,8 @@ interface ChemistDashboardProps {
 const { width } = Dimensions.get('window');
 
 const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   // State for modals and data
   const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
@@ -91,48 +93,48 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
   const chemistServices = [
     {
       id: '1',
-      title: 'Prescription Orders',
-      description: 'Process and fulfill prescriptions',
+      title: t('chemist.prescription_orders'),
+      description: t('chemist.prescription_orders_desc'),
       icon: '📋',
       color: '#3b82f6',
       action: () => setPrescriptionModalVisible(true),
     },
     {
       id: '2',
-      title: 'Medicine Inventory',
-      description: 'Manage medicine stock and availability',
+      title: t('chemist.inventory'),
+      description: t('chemist.inventory_desc'),
       icon: '💊',
       color: '#10b981',
       action: () => setInventoryModalVisible(true),
     },
     {
       id: '3',
-      title: 'Drug Information',
-      description: 'Access comprehensive drug database',
+      title: t('chemist.drug_info'),
+      description: t('chemist.drug_info_desc'),
       icon: '📚',
       color: '#f59e0b',
       action: () => setDrugInfoModalVisible(true),
     },
     {
       id: '4',
-      title: 'Patient Counseling',
-      description: 'Provide medication guidance',
+      title: t('chemist.counseling'),
+      description: t('chemist.counseling_desc'),
       icon: '🗣️',
       color: '#8b5cf6',
       action: () => setCounselingModalVisible(true),
     },
     {
       id: '5',
-      title: 'Sales Reports',
-      description: 'View sales and transaction reports',
+      title: t('chemist.sales'),
+      description: t('chemist.sales_desc'),
       icon: '📊',
       color: '#06b6d4',
       action: () => setSalesModalVisible(true),
     },
     {
       id: '6',
-      title: 'Supplier Orders',
-      description: 'Manage orders from suppliers',
+      title: t('chemist.suppliers'),
+      description: t('chemist.suppliers_desc'),
       icon: '🚛',
       color: '#dc2626',
       action: () => setSupplierModalVisible(true),
@@ -156,29 +158,51 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Welcome, {user?.name || 'Pharmacist'}!</Text>
-        <Text style={styles.subtitle}>Pharmacy Management System</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.greeting}>{t('chemist.welcome')} {user?.name || t('chemist.title')}!</Text>
+            <Text style={styles.subtitle}>{t('chemist.subtitle')}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={() => {
+              Alert.alert(
+                t('common.logout'),
+                t('common.logout_confirm'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  { text: t('common.logout'), style: 'destructive', onPress: () => {
+                    logout();
+                    navigation.navigate('Login');
+                  }}
+                ]
+              );
+            }}
+          >
+            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>18</Text>
-          <Text style={styles.statLabel}>Pending Orders</Text>
+          <Text style={styles.statLabel}>{t('chemist.pending_orders')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>342</Text>
-          <Text style={styles.statLabel}>In Stock Items</Text>
+          <Text style={styles.statLabel}>{t('chemist.stock_items')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>₹45,230</Text>
-          <Text style={styles.statLabel}>Today's Sales</Text>
+          <Text style={styles.statLabel}>{t('chemist.todays_sales')}</Text>
         </View>
       </View>
 
       {/* Pharmacy Services */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pharmacy Services</Text>
+        <Text style={styles.sectionTitle}>{t('chemist.services_title')}</Text>
         <View style={styles.servicesGrid}>
           {chemistServices.map((service) => (
             <TouchableOpacity
@@ -196,7 +220,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
 
       {/* Pending Orders */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pending Prescription Orders</Text>
+        <Text style={styles.sectionTitle}>{t('chemist.pending_prescriptions')}</Text>
         {pendingOrders.map((order) => (
           <View key={order.id} style={styles.orderCard}>
             <View style={styles.orderHeader}>
@@ -223,7 +247,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
 
       {/* Low Stock Alert */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>⚠️ Low Stock Alerts</Text>
+        <Text style={styles.sectionTitle}>⚠️ {t('chemist.low_stock_alerts')}</Text>
         {lowStockItems.map((item, index) => (
           <View key={index} style={styles.stockCard}>
             <View style={styles.stockInfo}>
@@ -281,7 +305,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
                   <TouchableOpacity 
                     style={styles.actionButton}
                     onPress={() => {
-                      Alert.alert('Process Prescription', `Processing prescription for ${item.patient}`);
+                      Alert.alert(t('chemist.process_prescription'), `${t('chemist.processing_for')} ${item.patient}`);
                       setPrescriptions(prev => prev.map(p => 
                         p.id === item.id ? { ...p, status: 'Processing' } : p
                       ));
@@ -339,9 +363,9 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
                   <View style={styles.inventoryActions}>
                     <TouchableOpacity 
                       style={styles.updateStockButton}
-                      onPress={() => Alert.alert('Update Stock', `Update stock for ${item.name}`)}
+                      onPress={() => Alert.alert(t('chemist.update_stock'), `${t('chemist.update_stock_for')} ${item.name}`)}
                     >
-                      <Text style={styles.updateStockText}>Update Stock</Text>
+                      <Text style={styles.updateStockText}>{t('chemist.update_stock')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -504,29 +528,29 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
             <ScrollView>
               <TouchableOpacity 
                 style={styles.supplierCard}
-                onPress={() => Alert.alert('Order from Cipla', 'Redirecting to order form...')}
+                onPress={() => Alert.alert(t('chemist.order_from_cipla'), t('chemist.redirecting_to_order'))}
               >
                 <Text style={styles.supplierName}>🏢 Cipla Limited</Text>
-                <Text style={styles.supplierDetails}>Antibiotics, Analgesics, Vitamins</Text>
-                <Text style={styles.supplierStatus}>Status: Available</Text>
+                <Text style={styles.supplierDetails}>{t('chemist.cipla_products')}</Text>
+                <Text style={styles.supplierStatus}>{t('common.status')}: {t('common.available')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.supplierCard}
-                onPress={() => Alert.alert('Order from Sun Pharma', 'Redirecting to order form...')}
+                onPress={() => Alert.alert(t('chemist.order_from_sun_pharma'), t('chemist.redirecting_to_order'))}
               >
                 <Text style={styles.supplierName}>🏢 Sun Pharmaceutical</Text>
-                <Text style={styles.supplierDetails}>Generic medicines, Chronic care</Text>
-                <Text style={styles.supplierStatus}>Status: Available</Text>
+                <Text style={styles.supplierDetails}>{t('chemist.sun_pharma_products')}</Text>
+                <Text style={styles.supplierStatus}>{t('common.status')}: {t('common.available')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.supplierCard}
-                onPress={() => Alert.alert('Order from Dr. Reddy\'s', 'Redirecting to order form...')}
+                onPress={() => Alert.alert(t('chemist.order_from_reddy'), t('chemist.redirecting_to_order'))}
               >
                 <Text style={styles.supplierName}>🏢 Dr. Reddy's Laboratories</Text>
-                <Text style={styles.supplierDetails}>Cardiac care, Diabetes management</Text>
-                <Text style={styles.supplierStatus}>Status: Available</Text>
+                <Text style={styles.supplierDetails}>{t('chemist.reddy_products')}</Text>
+                <Text style={styles.supplierStatus}>{t('common.status')}: {t('common.available')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -545,6 +569,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#f59e0b',
     padding: 20,
     paddingTop: 40,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   greeting: {
     fontSize: 24,

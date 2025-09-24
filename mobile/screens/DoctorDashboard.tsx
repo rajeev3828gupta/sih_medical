@@ -11,6 +11,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type DoctorDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -21,56 +22,57 @@ interface DoctorDashboardProps {
 const { width } = Dimensions.get('window');
 
 const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   const doctorServices = [
     {
       id: '1',
-      title: 'Patient Consultations',
-      description: 'View and manage patient appointments',
+      title: t('doctor.consultations'),
+      description: t('doctor.consultations_desc'),
       icon: '🩺',
       color: '#3b82f6',
-      action: () => Alert.alert('Patient Consultations', 'Feature coming soon!'),
+      action: () => Alert.alert(t('doctor.consultations'), t('common.feature_coming_soon')),
     },
     {
       id: '2',
-      title: 'Prescribe Medicine',
-      description: 'Create and manage prescriptions',
+      title: t('doctor.prescriptions'),
+      description: t('doctor.prescriptions_desc'),
       icon: '💊',
       color: '#10b981',
-      action: () => Alert.alert('Prescribe Medicine', 'Feature coming soon!'),
+      action: () => Alert.alert(t('doctor.prescriptions'), t('common.feature_coming_soon')),
     },
     {
       id: '3',
-      title: 'Patient Records',
-      description: 'Access complete patient medical history',
+      title: t('doctor.patients'),
+      description: t('doctor.patients_desc'),
       icon: '📋',
       color: '#f59e0b',
-      action: () => Alert.alert('Patient Records', 'Feature coming soon!'),
+      action: () => Alert.alert(t('doctor.patients'), t('common.feature_coming_soon')),
     },
     {
       id: '4',
-      title: 'Telemedicine',
-      description: 'Conduct virtual consultations',
+      title: t('doctor.telemedicine'),
+      description: t('doctor.telemedicine_desc'),
       icon: '📹',
       color: '#8b5cf6',
-      action: () => Alert.alert('Telemedicine', 'Starting video consultation...'),
+      action: () => Alert.alert(t('doctor.telemedicine'), t('telemedicine.starting')),
     },
     {
       id: '5',
-      title: 'Lab Reports',
-      description: 'Review and analyze lab results',
+      title: t('doctor.reports'),
+      description: t('doctor.reports_desc'),
       icon: '🔬',
       color: '#06b6d4',
-      action: () => Alert.alert('Lab Reports', 'Feature coming soon!'),
+      action: () => Alert.alert(t('doctor.reports'), t('common.feature_coming_soon')),
     },
     {
       id: '6',
-      title: 'Emergency Cases',
-      description: 'Handle urgent medical situations',
+      title: t('doctor.emergency_cases'),
+      description: t('doctor.emergency_cases_desc'),
       icon: '🚨',
       color: '#dc2626',
-      action: () => Alert.alert('Emergency Cases', 'No current emergencies'),
+      action: () => Alert.alert(t('doctor.emergency_cases'), t('doctor.no_emergencies')),
     },
   ];
 
@@ -85,29 +87,53 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Welcome, Dr. {user?.name?.split(' ')[1] || user?.name || 'Doctor'}!</Text>
-        <Text style={styles.subtitle}>Family Medicine Specialist</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.greeting}>
+              {t('doctor.welcome') + ' ' + (user?.name?.split(' ')[1] || user?.name || t('doctor.title'))}
+            </Text>
+            <Text style={styles.subtitle}>{t('doctor.specialty')}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={() => {
+              Alert.alert(
+                t('common.logout'),
+                t('common.logout_confirm'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  { text: t('common.logout'), style: 'destructive', onPress: () => {
+                    logout();
+                    navigation.navigate('Login');
+                  }}
+                ]
+              );
+            }}
+          >
+            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>24</Text>
-          <Text style={styles.statLabel}>Today's Patients</Text>
+          <Text style={styles.statLabel}>{t('doctor.patients_today')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>156</Text>
-          <Text style={styles.statLabel}>This Month</Text>
+          <Text style={styles.statLabel}>{t('doctor.patients_month')}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>4</Text>
-          <Text style={styles.statLabel}>Pending Reports</Text>
+          <Text style={styles.statLabel}>{t('doctor.pending_reports')}</Text>
         </View>
       </View>
 
       {/* Doctor Services */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Medical Services</Text>
+        <Text style={styles.sectionTitle}>{t('doctor.services_title')}</Text>
         <View style={styles.servicesGrid}>
           {doctorServices.map((service) => (
             <TouchableOpacity
@@ -125,7 +151,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
 
       {/* Today's Schedule */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Schedule</Text>
+        <Text style={styles.sectionTitle}>{t('doctor.schedule')}</Text>
         {todaySchedule.map((appointment) => (
           <View key={appointment.id} style={styles.scheduleCard}>
             <View style={styles.timeContainer}>
@@ -136,7 +162,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
               <Text style={styles.appointmentType}>{appointment.type}</Text>
             </View>
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>View</Text>
+              <Text style={styles.actionButtonText}>{t('view')}</Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -154,6 +180,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
     padding: 20,
     paddingTop: 40,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   greeting: {
     fontSize: 24,

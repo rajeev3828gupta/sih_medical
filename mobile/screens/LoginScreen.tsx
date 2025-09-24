@@ -9,11 +9,17 @@ import {
   Animated, 
   Easing,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import AnimatedButton from '../components/AnimatedButton';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { RegistrationApprovalService } from '../services/RegistrationApprovalService';
+import LanguageSelector from '../components/LanguageSelector';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -23,6 +29,7 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     const { login } = useAuth();
+    const { t } = useLanguage();
     const [loginMethod, setLoginMethod] = React.useState<'phone' | 'credentials'>('phone');
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
@@ -30,6 +37,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     const [otp, setOtp] = React.useState('');
     const [otpSent, setOtpSent] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(false);
+    const [isTracking, setIsTracking] = React.useState(false);
+    const [showTrackingModal, setShowTrackingModal] = React.useState(false);
+    const [trackingId, setTrackingId] = React.useState('');
   
     // Animation values
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -120,9 +130,56 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         Alert.alert('Login Failed', 'Invalid OTP. Please try again.');
       }
     };
+
+    const handleTrackApplication = () => {
+      setShowTrackingModal(true);
+      setTrackingId('');
+    };
+
+    const submitTrackingId = async () => {
+      if (!trackingId.trim()) {
+        Alert.alert('Required', 'Please enter your registration ID');
+        return;
+      }
+
+      setIsTracking(true);
+      try {
+        const result = await RegistrationApprovalService.trackRegistrationStatus(trackingId.trim());
+        
+        let title = 'Application Status';
+        let message = result.statusMessage + '\n\n' + result.nextSteps;
+
+        if (result.found && result.registration) {
+          message = `ID: ${result.registration.id}\n` +
+                   `Name: ${result.registration.fullName}\n` +
+                   `Role: ${result.registration.role.toUpperCase()}\n` +
+                   `Status: ${result.registration.status.toUpperCase()}\n` +
+                   `Submitted: ${new Date(result.registration.submittedAt).toLocaleDateString()}\n\n` +
+                   result.statusMessage + '\n\n' + result.nextSteps;
+        }
+
+        setShowTrackingModal(false);
+        Alert.alert(title, message);
+      } catch (error) {
+        Alert.alert('Error', 'Unable to track application. Please try again later.');
+        console.error('Tracking error:', error);
+      } finally {
+        setIsTracking(false);
+      }
+    };
   
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         <Animated.View 
           style={[
             styles.headerSection,
@@ -132,6 +189,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             }
           ]}
         >
+          <View style={styles.headerTop}>
+            <LanguageSelector style={styles.languageSelector} />
+          </View>
           <View style={styles.logoContainer}>
             <Animated.View 
               style={[
@@ -155,7 +215,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               }
             ]}
           >
-            Telemedicine Nabha
+            {t('login.title')}
           </Animated.Text>
           <Animated.Text 
             style={[
@@ -166,7 +226,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               }
             ]}
           >
-            Advanced Healthcare Solutions
+            {t('login.subtitle')}
           </Animated.Text>
           <Animated.Text 
             style={[
@@ -177,7 +237,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               }
             ]}
           >
-            Secure • Professional • Reliable
+            {t('login.secure_reliable')}
           </Animated.Text>
         </Animated.View>
         
@@ -200,7 +260,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 }
               ]}
             >
-              Secure Login
+              {t('login.secure_login')}
             </Animated.Text>
             
             <View style={styles.loginMethodToggle}>
@@ -209,7 +269,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 onPress={() => setLoginMethod('phone')}
               >
                 <Text style={[styles.toggleButtonText, loginMethod === 'phone' && styles.toggleButtonTextActive]}>
-                  Phone
+                  {t('login.phone')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -217,10 +277,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 onPress={() => setLoginMethod('credentials')}
               >
                 <Text style={[styles.toggleButtonText, loginMethod === 'credentials' && styles.toggleButtonTextActive]}>
-                  Credentials
+                  {t('login.credentials')}
                 </Text>
               </TouchableOpacity>
             </View>
+
+
   
             {loginMethod === 'phone' ? (
               !otpSent ? (
@@ -238,14 +300,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     }],
                   }}
                 >
-                  <Text style={styles.inputLabel}>Mobile Number</Text>
+                  <Text style={styles.inputLabel}>{t('login.mobile_number')}</Text>
                   <View style={styles.phoneInputContainer}>
                     <View style={styles.countryCodeContainer}>
                       <Text style={styles.countryCode}>+91</Text>
                     </View>
                     <TextInput
                       style={styles.phoneInput}
-                      placeholder="Enter 10-digit mobile number"
+                      placeholder={t('login.enter_mobile')}
                       placeholderTextColor="#6b7280"
                       value={phoneNumber}
                       onChangeText={setPhoneNumber}
@@ -260,7 +322,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     disabled={isLoading}
                   >
                     <Text style={styles.buttonText}>
-                      {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                      {isLoading ? t('login.sending_otp') : t('login.send_otp')}
                     </Text>
                   </AnimatedButton>
                 </Animated.View>
@@ -276,14 +338,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     }],
                   }}
                 >
-                  <Text style={styles.inputLabel}>Verification Code</Text>
+                  <Text style={styles.inputLabel}>{t('login.verification_code')}</Text>
                   <Text style={styles.otpDescription}>
-                    Enter the 6-digit code sent to {phoneNumber}
+                    {t('login.otp_description')} {phoneNumber}
                   </Text>
                   
                   <TextInput
                     style={styles.otpInput}
-                    placeholder="6-digit OTP"
+                    placeholder={t('login.otp_placeholder')}
                     placeholderTextColor="#6b7280"
                     value={otp}
                     onChangeText={setOtp}
@@ -297,7 +359,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     disabled={isLoading}
                   >
                     <Text style={styles.buttonText}>
-                      {isLoading ? 'Verifying...' : 'Verify & Login'}
+                      {isLoading ? t('login.verifying') : t('login.verify_otp')}
                     </Text>
                   </AnimatedButton>
                   
@@ -305,36 +367,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     style={styles.secondaryButton}
                     onPress={() => setOtpSent(false)}
                   >
-                    <Text style={styles.secondaryButtonText}>Change Number</Text>
+                    <Text style={styles.secondaryButtonText}>{t('login.change_number')}</Text>
                   </AnimatedButton>
                 </Animated.View>
               )
             ) : (
               <View>
-                <Text style={styles.inputLabel}>Username</Text>
+                <Text style={styles.inputLabel}>{t('username')}</Text>
                 <TextInput
                   style={styles.credentialInput}
-                  placeholder="Enter your username"
+                  placeholder={t('username')}
                   placeholderTextColor="#6b7280"
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
                 />
-                <Text style={styles.inputLabel}>Password</Text>
+                <Text style={styles.inputLabel}>{t('password')}</Text>
                 <TextInput
                   style={styles.credentialInput}
-                  placeholder="Enter your password"
+                  placeholder={t('password')}
                   placeholderTextColor="#6b7280"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
                 />
                 
-                <View style={styles.adminHintContainer}>
-                  <Text style={styles.adminHintText}>
-                    💡 Admin Access: Use admin@sihmedical.com / admin123
-                  </Text>
-                </View>
                 <AnimatedButton
                   style={[styles.primaryButton, isLoading && styles.disabledButton]}
                   onPress={async () => {
@@ -350,13 +407,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     if (success) {
                       navigation.navigate('Dashboard');
                     } else {
-                      Alert.alert('Login Failed', 'Invalid credentials. Please try again.\n\nAdmin Login:\nUsername: admin\nPassword: admin123');
+                      Alert.alert('Login Failed', 'Invalid credentials. Please try again.');
                     }
                   }}
                   disabled={isLoading}
                 >
                   <Text style={styles.buttonText}>
-                    {isLoading ? 'Logging in...' : 'Login'}
+                    {isLoading ? t('login.logging_in') : t('login.login_button')}
                   </Text>
                 </AnimatedButton>
               </View>
@@ -373,12 +430,33 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             }
           ]}
         >
-          <Text style={styles.registrationText}>Don't have an account?</Text>
+          <Text style={styles.registrationText}>{t('login.register_prompt')}</Text>
           <AnimatedButton
             style={styles.registrationButton}
             onPress={() => navigation.navigate('Registration')}
           >
-            <Text style={styles.registrationButtonText}>Register Here</Text>
+            <Text style={styles.registrationButtonText}>{t('login.register_link')}</Text>
+          </AnimatedButton>
+        </Animated.View>
+
+        <Animated.View 
+          style={[
+            styles.registrationPrompt,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <Text style={styles.registrationText}>{t('login.track_your_application')}</Text>
+          <AnimatedButton
+            style={styles.registrationButton}
+            onPress={() => setShowTrackingModal(true)}
+            disabled={isTracking}
+          >
+            <Text style={styles.registrationButtonText}>
+              {isTracking ? t('login.tracking') : t('login.track_application')}
+            </Text>
           </AnimatedButton>
         </Animated.View>
         
@@ -393,16 +471,61 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         >
           <View style={styles.securityBadge}>
             <Text style={styles.securityIcon}>🔒</Text>
-            <Text style={styles.securityText}>SSL Secured</Text>
+            <Text style={styles.securityText}>{t('login.ssl_secured')}</Text>
           </View>
           <Text style={styles.footerText}>
-            Protected by advanced encryption & medical-grade security protocols
+            {t('login.security_text')}
           </Text>
           <View style={styles.complianceInfo}>
-            <Text style={styles.complianceText}>HIPAA Compliant • ISO 27001 Certified</Text>
+            <Text style={styles.complianceText}>{t('login.compliance_text')}</Text>
           </View>
         </Animated.View>
-      </ScrollView>
+        </ScrollView>
+
+        {/* Tracking Modal */}
+        <Modal
+          visible={showTrackingModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowTrackingModal(false)}
+        >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>{t('login.track_application')}</Text>
+            <Text style={styles.modalSubtitle}>{t('login.track_subtitle')}</Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              placeholder={t('login.enter_registration_id')}
+              placeholderTextColor="#a1a1aa"
+              value={trackingId}
+              onChangeText={setTrackingId}
+              autoCapitalize="none"
+              autoFocus={true}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowTrackingModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.trackButton, isTracking && styles.trackButtonDisabled]}
+                onPress={submitTrackingId}
+                disabled={isTracking}
+              >
+                <Text style={styles.trackButtonText}>
+                  {isTracking ? t('login.tracking') : t('login.track_status')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        </Modal>
+      </KeyboardAvoidingView>
     );
   };
 
@@ -731,19 +854,90 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         fontSize: 16,
         fontWeight: '600',
       },
-      adminHintContainer: {
-        marginTop: 12,
-        padding: 12,
-        backgroundColor: '#f0f9ff',
-        borderRadius: 8,
-        borderLeftWidth: 4,
-        borderLeftColor: '#0ea5e9',
+      // Modal styles
+      modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
       },
-      adminHintText: {
-        fontSize: 12,
-        color: '#0369a1',
-        fontWeight: '500',
+      modalContainer: {
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
+        padding: 24,
+        width: '100%',
+        maxWidth: 400,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 8,
+      },
+      modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1f2937',
         textAlign: 'center',
+        marginBottom: 8,
+      },
+      modalSubtitle: {
+        fontSize: 14,
+        color: '#64748b',
+        textAlign: 'center',
+        marginBottom: 20,
+      },
+      modalInput: {
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        color: '#1f2937',
+        marginBottom: 20,
+        backgroundColor: '#f9fafb',
+      },
+      modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+      },
+      modalButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+      },
+      cancelButton: {
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+      },
+      cancelButtonText: {
+        color: '#6b7280',
+        fontSize: 16,
+        fontWeight: '600',
+      },
+      trackButton: {
+        backgroundColor: '#0f766e',
+      },
+      trackButtonDisabled: {
+        backgroundColor: '#9ca3af',
+      },
+      trackButtonText: {
+        color: '#ffffff',
+        fontSize: 16,
+        fontWeight: '600',
+      },
+      headerTop: {
+        alignItems: 'flex-end',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        marginBottom: 10,
+      },
+      languageSelector: {
+        marginTop: 10,
       },
 });
 

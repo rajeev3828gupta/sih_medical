@@ -8,10 +8,18 @@ import {
   Animated, 
   Easing,
   Alert,
+  Modal,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import AnimatedButton from '../components/AnimatedButton';
+import { RegistrationApprovalService, PendingRegistration } from '../services/RegistrationApprovalService';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 type RegistrationScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Registration'>;
 
@@ -20,8 +28,11 @@ interface RegistrationScreenProps {
 }
 
 const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) => {
+    const { t } = useLanguage();
     const [selectedRole, setSelectedRole] = React.useState<string | null>(null);
     const [currentStep, setCurrentStep] = React.useState(1);
+    const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+    const [registrationId, setRegistrationId] = React.useState('');
     const [formData, setFormData] = React.useState({
       // Common fields
       fullName: '',
@@ -87,10 +98,63 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
       setFormData(prev => ({ ...prev, [field]: value }));
     };
   
-    const handleRegistration = () => {
-      // Registration logic here
-      Alert.alert('Success', `${selectedRole} registration submitted successfully!`);
-      navigation.navigate('Login');
+    const handleRegistration = async () => {
+      // Validate required fields
+      if (!selectedRole || !formData.fullName || !formData.email || !formData.phone) {
+        Alert.alert('Error', 'Please fill in all required fields');
+        return;
+      }
+
+      try {
+        // Prepare registration data based on role
+        const registrationData: Omit<PendingRegistration, 'id' | 'status' | 'submittedAt'> = {
+          role: selectedRole as 'doctor' | 'patient' | 'pharmacy' | 'admin',
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+        };
+
+        // Add role-specific data
+        if (selectedRole === 'doctor') {
+          registrationData.doctorData = {
+            medicalLicense: formData.medicalLicense,
+            specialization: formData.specialization,
+            hospital: formData.hospital,
+            experience: formData.experience,
+          };
+        } else if (selectedRole === 'pharmacy') {
+          registrationData.pharmacyData = {
+            pharmacyName: formData.pharmacyName,
+            pharmacyLicense: formData.pharmacyLicense,
+            pharmacyAddress: formData.pharmacyAddress,
+          };
+        } else if (selectedRole === 'admin') {
+          registrationData.adminData = {
+            adminCode: formData.adminCode,
+            department: formData.department,
+          };
+        }
+
+        // Submit registration request
+        const submittedId = await RegistrationApprovalService.submitRegistrationRequest(registrationData);
+        
+        // Show success modal with copy functionality
+        setRegistrationId(submittedId);
+        setShowSuccessModal(true);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to submit registration request. Please try again.');
+        console.error('Registration submission error:', error);
+      }
+    };
+
+    const copyRegistrationId = async () => {
+      try {
+        await Clipboard.setStringAsync(registrationId);
+        Alert.alert('✅ ID Copied!', `Registration ID: ${registrationId}\n\nThe ID has been copied to your clipboard. You can now paste it anywhere to save or share it.`);
+      } catch (error) {
+        // Fallback if clipboard fails
+        Alert.alert('📋 Copy ID', `Registration ID: ${registrationId}\n\nPlease manually copy and save this ID to track your application status.`);
+      }
     };
   
     const renderRoleSelection = () => (
@@ -103,15 +167,15 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
           }
         ]}
       >
-        <Text style={styles.registrationTitle}>Select Your Role</Text>
-        <Text style={styles.registrationSubtitle}>Choose how you want to use Telemedicine Nabha</Text>
+        <Text style={styles.registrationTitle}>{t('register.select_role')}</Text>
+        <Text style={styles.registrationSubtitle}>{t('register.role_description')}</Text>
         
         <View style={styles.rolesGrid}>
           {[
-            { key: 'patient', title: 'Patient/User', icon: '🧑‍💼', desc: 'Book appointments, consultations' },
-            { key: 'doctor', title: 'Doctor', icon: '👨‍⚕️', desc: 'Provide medical consultations' },
-            { key: 'chemist', title: 'Chemist', icon: '💊', desc: 'Manage pharmacy services' },
-            { key: 'admin', title: 'Administrator', icon: '⚙️', desc: 'System administration' },
+            { key: 'patient', titleKey: 'register.patient', icon: '🧑‍💼', descKey: 'register.patient_desc' },
+            { key: 'doctor', titleKey: 'register.doctor', icon: '👨‍⚕️', descKey: 'register.doctor_desc' },
+            { key: 'chemist', titleKey: 'register.chemist', icon: '💊', descKey: 'register.chemist_desc' },
+            { key: 'admin', titleKey: 'register.admin', icon: '⚙️', descKey: 'register.admin_desc' },
           ].map((role) => (
             <AnimatedButton
               key={role.key}
@@ -122,8 +186,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               onPress={() => selectRole(role.key)}
             >
               <Text style={styles.roleIcon}>{role.icon}</Text>
-              <Text style={styles.roleTitle}>{role.title}</Text>
-              <Text style={styles.roleDescription}>{role.desc}</Text>
+              <Text style={styles.roleTitle}>{t(role.titleKey)}</Text>
+              <Text style={styles.roleDescription}>{t(role.descKey)}</Text>
             </AnimatedButton>
           ))}
         </View>
@@ -148,71 +212,69 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
             <Text style={styles.registrationBackButtonText}>←</Text>
           </AnimatedButton>
           <Text style={styles.formTitle}>
-            {selectedRole === 'patient' ? 'Patient Registration' :
-             selectedRole === 'doctor' ? 'Doctor Registration' :
-             selectedRole === 'chemist' ? 'Chemist Registration' :
-             'Admin Registration'}
+            {selectedRole === 'patient' ? t('register.patient_registration') :
+             selectedRole === 'doctor' ? t('register.doctor_registration') :
+             selectedRole === 'chemist' ? t('register.chemist_registration') :
+             t('register.admin_registration')}
           </Text>
         </View>
   
         <ScrollView style={styles.formContent}>
           {/* Common Fields */}
           <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>Full Name</Text>
+            <Text style={styles.formInputLabel}>{t('register.full_name')}</Text>
             <TextInput
               style={styles.formInput}
               value={formData.fullName}
               onChangeText={(text) => handleInputChange('fullName', text)}
-              placeholder="Enter your full name"
+              placeholder={t('register.enter_full_name')}
               placeholderTextColor="#64748b"
             />
           </View>
   
           <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>Email Address</Text>
+            <Text style={styles.formInputLabel}>{t('register.email')}</Text>
             <TextInput
               style={styles.formInput}
               value={formData.email}
               onChangeText={(text) => handleInputChange('email', text)}
-              placeholder="Enter your email"
+              placeholder={t('register.enter_email')}
               placeholderTextColor="#64748b"
               keyboardType="email-address"
             />
           </View>
   
           <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>Phone Number</Text>
+            <Text style={styles.formInputLabel}>{t('register.phone')}</Text>
             <TextInput
               style={styles.formInput}
               value={formData.phone}
               onChangeText={(text) => handleInputChange('phone', text)}
-              placeholder="Enter phone number"
+              placeholder={t('register.enter_phone')}
               placeholderTextColor="#64748b"
               keyboardType="phone-pad"
             />
           </View>
   
           <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>Password</Text>
+            <Text style={styles.formInputLabel}>{t('register.password')}</Text>
             <TextInput
               style={styles.formInput}
               value={formData.password}
               onChangeText={(text) => handleInputChange('password', text)}
-              placeholder="Create password"
+              placeholder={t('register.create_password')}
               placeholderTextColor="#64748b"
-              secureTextEntry
             />
           </View>
   
           <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>Confirm Password</Text>
+            <Text style={styles.formInputLabel}>{t('register.confirm_password')}</Text>
             <TextInput
               style={styles.formInput}
               value={formData.confirmPassword}
               onChangeText={(text) => handleInputChange('confirmPassword', text)}
-              placeholder="Confirm password"
+              placeholder={t('register.confirm_password_placeholder')}
               placeholderTextColor="#64748b"
-              secureTextEntry
             />
           </View>
   
@@ -220,42 +282,42 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
           {selectedRole === 'doctor' && (
             <>
               <View style={styles.inputGroup}>
-                <Text style={styles.formInputLabel}>Medical License Number</Text>
+                <Text style={styles.formInputLabel}>{t('register.medical_license')}</Text>
                 <TextInput
                   style={styles.formInput}
                   value={formData.medicalLicense}
                   onChangeText={(text) => handleInputChange('medicalLicense', text)}
-                  placeholder="Enter license number"
+                  placeholder={t('register.enter_license')}
                   placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.formInputLabel}>Specialization</Text>
+                <Text style={styles.formInputLabel}>{t('register.specialization')}</Text>
                 <TextInput
                   style={styles.formInput}
                   value={formData.specialization}
                   onChangeText={(text) => handleInputChange('specialization', text)}
-                  placeholder="e.g., Cardiology, Pediatrics"
+                  placeholder={t('register.specialization_placeholder')}
                   placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.formInputLabel}>Hospital/Clinic</Text>
+                <Text style={styles.formInputLabel}>{t('register.hospital')}</Text>
                 <TextInput
                   style={styles.formInput}
                   value={formData.hospital}
                   onChangeText={(text) => handleInputChange('hospital', text)}
-                  placeholder="Hospital or clinic name"
+                  placeholder={t('register.hospital_placeholder')}
                   placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.formInputLabel}>Years of Experience</Text>
+                <Text style={styles.formInputLabel}>{t('register.experience')}</Text>
                 <TextInput
                   style={styles.formInput}
                   value={formData.experience}
                   onChangeText={(text) => handleInputChange('experience', text)}
-                  placeholder="Years of practice"
+                  placeholder={t('register.experience_placeholder')}
                   placeholderTextColor="#64748b"
                   keyboardType="numeric"
                 />
@@ -266,22 +328,22 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
           {selectedRole === 'chemist' && (
             <>
               <View style={styles.inputGroup}>
-                <Text style={styles.formInputLabel}>Pharmacy Name</Text>
+                <Text style={styles.formInputLabel}>{t('register.pharmacy_name')}</Text>
                 <TextInput
                   style={styles.formInput}
                   value={formData.pharmacyName}
                   onChangeText={(text) => handleInputChange('pharmacyName', text)}
-                  placeholder="Enter pharmacy name"
+                  placeholder={t('register.enter_pharmacy_name')}
                   placeholderTextColor="#64748b"
                 />
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.formInputLabel}>Pharmacy License</Text>
+                <Text style={styles.formInputLabel}>{t('register.pharmacy_license')}</Text>
                 <TextInput
                   style={styles.formInput}
                   value={formData.pharmacyLicense}
                   onChangeText={(text) => handleInputChange('pharmacyLicense', text)}
-                  placeholder="Pharmacy license number"
+                  placeholder={t('register.pharmacy_license_placeholder')}
                   placeholderTextColor="#64748b"
                 />
               </View>
@@ -309,7 +371,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   onChangeText={(text) => handleInputChange('adminCode', text)}
                   placeholder="Enter admin code"
                   placeholderTextColor="#64748b"
-                  secureTextEntry
                 />
               </View>
               <View style={styles.inputGroup}>
@@ -343,7 +404,17 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
     );
   
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         <Animated.View 
           style={[
             styles.registrationHeader,
@@ -370,7 +441,58 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
         </Animated.View>
   
         {currentStep === 1 ? renderRoleSelection() : renderRegistrationForm()}
-      </ScrollView>
+        </ScrollView>
+
+        {/* Success Modal with Copy Functionality */}
+        <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContainer}>
+            <Text style={styles.successIcon}>✅</Text>
+            <Text style={styles.successTitle}>Registration Submitted!</Text>
+            <Text style={styles.successMessage}>
+              Your {selectedRole} registration request has been submitted for admin approval.
+            </Text>
+            
+            <View style={styles.idContainer}>
+              <Text style={styles.idLabel}>Registration ID:</Text>
+              <View style={styles.idBox}>
+                <Text style={styles.idText}>{registrationId}</Text>
+                <TouchableOpacity style={styles.copyButton} onPress={copyRegistrationId}>
+                  <Text style={styles.copyButtonText}>📋 Copy</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>📍 IMPORTANT: Save this ID to track your application status!</Text>
+              <Text style={styles.infoText}>✅ Use "Track Application" on the login screen</Text>
+              <Text style={styles.infoText}>📧 You will receive login credentials once approved</Text>
+              <Text style={styles.infoText}>⏰ Processing usually takes 1-2 business days</Text>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.copyIdButton} onPress={copyRegistrationId}>
+                <Text style={styles.copyIdButtonText}>Copy ID Again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.continueButton} 
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  navigation.navigate('Login');
+                }}
+              >
+                <Text style={styles.continueButtonText}>Continue to Login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        </Modal>
+      </KeyboardAvoidingView>
     );
   };
 
@@ -575,6 +697,128 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
       },
       loginLinkText: {
         color: '#0f766e',
+        fontSize: 16,
+        fontWeight: '600',
+      },
+      // Modal styles
+      modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+      },
+      successModalContainer: {
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        padding: 30,
+        width: '100%',
+        maxWidth: 400,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
+      },
+      successIcon: {
+        fontSize: 48,
+        marginBottom: 16,
+      },
+      successTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        textAlign: 'center',
+        marginBottom: 12,
+      },
+      successMessage: {
+        fontSize: 16,
+        color: '#64748b',
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+      },
+      idContainer: {
+        width: '100%',
+        marginBottom: 24,
+      },
+      idLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1f2937',
+        marginBottom: 8,
+        textAlign: 'center',
+      },
+      idBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 2,
+        borderColor: '#0f766e',
+      },
+      idText: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#0f766e',
+        fontFamily: 'monospace',
+      },
+      copyButton: {
+        backgroundColor: '#0f766e',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        marginLeft: 8,
+      },
+      copyButtonText: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '600',
+      },
+      infoContainer: {
+        width: '100%',
+        marginBottom: 24,
+      },
+      infoText: {
+        fontSize: 14,
+        color: '#64748b',
+        marginBottom: 6,
+        textAlign: 'left',
+      },
+      modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        gap: 12,
+      },
+      copyIdButton: {
+        flex: 1,
+        backgroundColor: '#f3f4f6',
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+      },
+      copyIdButtonText: {
+        color: '#6b7280',
+        fontSize: 16,
+        fontWeight: '600',
+      },
+      continueButton: {
+        flex: 1,
+        backgroundColor: '#0f766e',
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        alignItems: 'center',
+      },
+      continueButtonText: {
+        color: '#ffffff',
         fontSize: 16,
         fontWeight: '600',
       },

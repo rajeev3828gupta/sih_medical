@@ -8,7 +8,7 @@ import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 // Import types and screens
 import { RootStackParamList } from './types/navigation';
 import { AuthProvider } from './contexts/AuthContext';
-import { LanguageProvider } from './contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegistrationScreen from './screens/RegistrationScreen';
@@ -34,6 +34,7 @@ import ABHAIntegration from './screens/ABHAIntegration';
 import Teleconsultation from './screens/Teleconsultation';
 import LowBandwidthOptimization from './screens/LowBandwidthOptimization';
 import AdminPanel from './screens/AdminPanel';
+import LanguageSettingsScreen from './screens/LanguageSettingsScreen';
 
 // Global variable to store dashboard modal functions
 let dashboardModalFunctions: {
@@ -53,26 +54,199 @@ const queryClient = new QueryClient();
 
 // Consultation Summary Screen Component
 const ConsultationSummaryScreen = ({ route, navigation }: any) => {
+  const { t } = useLanguage();
   const { appointmentId, duration, doctorName } = route.params;
 
   return (
     <View style={summaryStyles.container}>
       <View style={summaryStyles.content}>
-        <Text style={summaryStyles.title}>📋 Consultation Summary</Text>
+        <Text style={summaryStyles.title}>📋 {t('consultation_summary')}</Text>
         <Text style={summaryStyles.subtitle}>
-          Your consultation with Dr. {doctorName} has been completed.
+          {t('consultation_completed_with')} Dr. {doctorName}.
         </Text>
         <Text style={summaryStyles.duration}>
-          Duration: {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
+          {t('duration')}: {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
         </Text>
         <TouchableOpacity 
           style={summaryStyles.button}
           onPress={() => navigation.navigate('Dashboard')}
         >
-          <Text style={summaryStyles.buttonText}>Return to Dashboard</Text>
+          <Text style={summaryStyles.buttonText}>{t('return_to_dashboard')}</Text>
         </TouchableOpacity>
       </View>
     </View>
+  );
+};
+
+// Navigation Component with translations
+const AppNavigator = () => {
+  const { t } = useLanguage();
+
+  return (
+    <Stack.Navigator
+      initialRouteName="Welcome"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen 
+        name="Welcome" 
+        component={WelcomeScreen} 
+      />
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen} 
+      />
+      <Stack.Screen 
+        name="Registration" 
+        component={RegistrationScreen} 
+      />
+      <Stack.Screen 
+        name="Dashboard" 
+        component={DashboardScreen} 
+        options={({ navigation, route }) => ({
+          headerShown: true, 
+          title: t('dashboard_title'),
+          headerStyle: {
+            backgroundColor: '#FFFFFF',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 5,
+          },
+          headerTitleStyle: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: '#1E293B',
+          },
+          headerRight: () => (
+            <View style={headerStyles.headerActions}>
+              <TouchableOpacity 
+                style={headerStyles.actionButton}
+                onPress={() => {
+                  if (dashboardModalFunctions) {
+                    dashboardModalFunctions.showProfileModal();
+                  }
+                }}
+              >
+                <Text style={headerStyles.profileIcon}>👤</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={headerStyles.actionButton}
+                onPress={() => {
+                  if (dashboardModalFunctions) {
+                    dashboardModalFunctions.showMoreModal();
+                  }
+                }}
+              >
+                <Text style={headerStyles.moreIcon}>⋯</Text>
+              </TouchableOpacity>
+            </View>
+          ),
+        })}
+      />
+      <Stack.Screen 
+        name="Pharmacy" 
+        component={PharmacyScreen} 
+        options={{ headerShown: true, title: t('pharmacy_services') }}
+      />
+      <Stack.Screen 
+        name="Consultation" 
+        component={ConsultationScreen} 
+        options={{ headerShown: true, title: t('physician_consultation') }}
+      />
+      <Stack.Screen 
+        name="Appointment" 
+        component={AppointmentScreen} 
+        options={{ headerShown: true, title: t('book_appointment') }}
+      />
+      <Stack.Screen 
+        name="AISymptoms" 
+        component={AISymptomsScreen} 
+        options={{ headerShown: true, title: t('ai_symptom_checker') }}
+      />
+      <Stack.Screen 
+        name="MedicalRecords" 
+        component={MedicalRecordsScreen} 
+        options={{ headerShown: true, title: t('medical_records') }}
+      />
+      <Stack.Screen 
+        name="Emergency" 
+        component={EmergencyScreen} 
+        options={{ headerShown: true, title: t('emergency_care') }}
+      />
+      
+      {/* Enhanced Feature Screens */}
+      <Stack.Screen 
+        name="MultilingualSymptomChecker" 
+        component={MultilingualSymptomChecker} 
+        options={{ headerShown: true, title: t('ai_health_assistant') }}
+      />
+      <Stack.Screen 
+        name="ABHAIntegration" 
+        component={ABHAIntegration} 
+        options={{ headerShown: true, title: t('abha_health_records') }}
+      />
+      <Stack.Screen 
+        name="Teleconsultation" 
+        component={Teleconsultation} 
+        options={{ 
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: false 
+        }}
+      />
+      <Stack.Screen 
+        name="LowBandwidthOptimization" 
+        component={LowBandwidthOptimization} 
+        options={{ headerShown: true, title: t('network_settings') }}
+      />
+      <Stack.Screen 
+        name="AdminPanel" 
+        component={AdminPanel} 
+        options={{ headerShown: false }}
+      />
+      
+      {/* Rural Healthcare Features */}
+      <Stack.Screen 
+        name="AISymptomChecker" 
+        component={AISymptomChecker} 
+        options={{ headerShown: true, title: t('ai_symptom_checker') }}
+      />
+      <Stack.Screen 
+        name="OfflineHealthRecords" 
+        component={OfflineHealthRecords} 
+        options={{ headerShown: true, title: t('health_records') }}
+      />
+      <Stack.Screen 
+        name="VillageHealthNetwork" 
+        component={VillageHealthNetwork} 
+        options={{ headerShown: true, title: t('village_health_network') }}
+      />
+      <Stack.Screen 
+        name="TelemedicineSystem" 
+        component={TelemedicineSystem} 
+        options={{ headerShown: true, title: t('telemedicine_title') }}
+      />
+      <Stack.Screen 
+        name="MedicineAvailabilityTracker" 
+        component={MedicineAvailabilityTracker} 
+        options={{ headerShown: true, title: t('medicine_tracker') }}
+      />
+      
+      <Stack.Screen 
+        name="LanguageSettings" 
+        component={LanguageSettingsScreen} 
+        options={{ headerShown: false }}
+      />
+      
+      <Stack.Screen 
+        name="ConsultationSummary" 
+        component={ConsultationSummaryScreen} 
+        options={{ headerShown: true, title: t('consultation_summary') }}
+      />
+    </Stack.Navigator>
   );
 };
 
@@ -82,170 +256,11 @@ export default function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName="Welcome"
-            screenOptions={{
-              headerShown: false,
-            }}
-          >
-          <Stack.Screen 
-            name="Welcome" 
-            component={WelcomeScreen} 
-          />
-          <Stack.Screen 
-            name="Login" 
-            component={LoginScreen} 
-          />
-          <Stack.Screen 
-            name="Registration" 
-            component={RegistrationScreen} 
-          />
-                    <Stack.Screen 
-            name="Dashboard" 
-            component={DashboardScreen} 
-            options={({ navigation, route }) => ({
-              headerShown: true, 
-              title: 'Dashboard',
-              headerStyle: {
-                backgroundColor: '#FFFFFF',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 5,
-              },
-              headerTitleStyle: {
-                fontSize: 18,
-                fontWeight: '700',
-                color: '#1E293B',
-              },
-              headerRight: () => (
-                <View style={headerStyles.headerActions}>
-                  <TouchableOpacity 
-                    style={headerStyles.actionButton}
-                    onPress={() => {
-                      // Trigger profile modal through global function
-                      if (dashboardModalFunctions) {
-                        dashboardModalFunctions.showProfileModal();
-                      }
-                    }}
-                  >
-                    <Text style={headerStyles.profileIcon}>👤</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={headerStyles.actionButton}
-                    onPress={() => {
-                      // Trigger more options modal through global function
-                      if (dashboardModalFunctions) {
-                        dashboardModalFunctions.showMoreModal();
-                      }
-                    }}
-                  >
-                    <Text style={headerStyles.moreIcon}>⋯</Text>
-                  </TouchableOpacity>
-                </View>
-              ),
-            })}
-          />
-          <Stack.Screen 
-            name="Pharmacy" 
-            component={PharmacyScreen} 
-            options={{ headerShown: true, title: 'Pharmacy Services' }}
-          />
-          <Stack.Screen 
-            name="Consultation" 
-            component={ConsultationScreen} 
-            options={{ headerShown: true, title: 'Physician Consultation' }}
-          />
-          <Stack.Screen 
-            name="Appointment" 
-            component={AppointmentScreen} 
-            options={{ headerShown: true, title: 'Book Appointment' }}
-          />
-          <Stack.Screen 
-            name="AISymptoms" 
-            component={AISymptomsScreen} 
-            options={{ headerShown: true, title: 'AI Symptom Checker' }}
-          />
-          <Stack.Screen 
-            name="MedicalRecords" 
-            component={MedicalRecordsScreen} 
-            options={{ headerShown: true, title: 'Medical Records' }}
-          />
-          <Stack.Screen 
-            name="Emergency" 
-            component={EmergencyScreen} 
-            options={{ headerShown: true, title: 'Emergency Care' }}
-          />
-          
-          {/* Enhanced Feature Screens */}
-          <Stack.Screen 
-            name="MultilingualSymptomChecker" 
-            component={MultilingualSymptomChecker} 
-            options={{ headerShown: true, title: 'AI Health Assistant' }}
-          />
-          <Stack.Screen 
-            name="ABHAIntegration" 
-            component={ABHAIntegration} 
-            options={{ headerShown: true, title: 'ABHA Health Records' }}
-          />
-          <Stack.Screen 
-            name="Teleconsultation" 
-            component={Teleconsultation} 
-            options={{ 
-              headerShown: false,
-              presentation: 'modal',
-              gestureEnabled: false 
-            }}
-          />
-          <Stack.Screen 
-            name="LowBandwidthOptimization" 
-            component={LowBandwidthOptimization} 
-            options={{ headerShown: true, title: 'Network Settings' }}
-          />
-          <Stack.Screen 
-            name="AdminPanel" 
-            component={AdminPanel} 
-            options={{ headerShown: false }}
-          />
-          
-          {/* Rural Healthcare Features */}
-          <Stack.Screen 
-            name="AISymptomChecker" 
-            component={AISymptomChecker} 
-            options={{ headerShown: true, title: 'AI Symptom Checker' }}
-          />
-          <Stack.Screen 
-            name="OfflineHealthRecords" 
-            component={OfflineHealthRecords} 
-            options={{ headerShown: true, title: 'Health Records' }}
-          />
-          <Stack.Screen 
-            name="VillageHealthNetwork" 
-            component={VillageHealthNetwork} 
-            options={{ headerShown: true, title: 'Village Health Network' }}
-          />
-          <Stack.Screen 
-            name="TelemedicineSystem" 
-            component={TelemedicineSystem} 
-            options={{ headerShown: true, title: 'Telemedicine' }}
-          />
-          <Stack.Screen 
-            name="MedicineAvailabilityTracker" 
-            component={MedicineAvailabilityTracker} 
-            options={{ headerShown: true, title: 'Medicine Tracker' }}
-          />
-          
-          <Stack.Screen 
-            name="ConsultationSummary" 
-            component={ConsultationSummaryScreen} 
-            options={{ headerShown: true, title: 'Consultation Summary' }}
-          />
-        </Stack.Navigator>
-        <StatusBar style="light" />
-      </NavigationContainer>
-    </QueryClientProvider>
-    </AuthProvider>
+            <AppNavigator />
+            <StatusBar style="light" />
+          </NavigationContainer>
+        </QueryClientProvider>
+      </AuthProvider>
     </LanguageProvider>
   );
 }

@@ -107,8 +107,8 @@ const KioskMode: React.FC<KioskModeProps> = ({
     resetIdleTimer();
     
     Alert.alert(
-      '🚨 EMERGENCY ALERT',
-      `Emergency case detected: ${session.patientName}\n\nImmediate medical attention required!`,
+      `🚨 ${t('kiosk.emergency_alert')}`,
+      `${t('kiosk.emergency_detected')}: ${session.patientName}\n\n${t('kiosk.immediate_attention_required')}`,
       [
         {
           text: 'Call 108',
@@ -219,8 +219,8 @@ const KioskMode: React.FC<KioskModeProps> = ({
       onPress={() => {
         resetIdleTimer();
         Alert.alert(
-          'Emergency Services',
-          'Call 108 for medical emergency?',
+          t('emergency.title'),
+          t('kiosk.call_108_confirmation'),
           [
             { text: 'Cancel', style: 'cancel' },
             { 

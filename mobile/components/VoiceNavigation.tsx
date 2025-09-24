@@ -50,7 +50,7 @@ const VoiceNavigation: React.FC<VoiceNavigationProps> = ({
       registerVoiceCommand('emergency', () => {
         onNavigate?.('Emergency');
         speak?.(t('audio.emergency_detected'));
-        Alert.alert('Emergency', 'Emergency services activated');
+        Alert.alert(t('emergency.title'), t('voice.emergency_activated'));
       });
 
       registerVoiceCommand('medicine_tracker', () => {

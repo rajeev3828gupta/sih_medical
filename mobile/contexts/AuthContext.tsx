@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { RegistrationApprovalService } from '../services/RegistrationApprovalService';
 
 interface User {
   id: string;
@@ -43,13 +44,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     role: 'admin' as const
   };
 
+  // Test credentials for development (in production, this should be secured)
+  const TEST_CREDENTIALS: Array<{
+    username: string;
+    password: string;
+    name: string;
+    id: string;
+    role: 'admin' | 'doctor' | 'patient' | 'pharmacy';
+  }> = [
+    {
+      username: 'doctor1',
+      password: 'doctor123',
+      name: 'Dr. Rajesh Kumar',
+      id: 'doc_001',
+      role: 'doctor'
+    },
+    {
+      username: 'chemist1',
+      password: 'chemist123',
+      name: 'Pharmacist Priya Singh',
+      id: 'pharm_001',
+      role: 'pharmacy'
+    },
+    {
+      username: 'che_bhal_2373',
+      password: 'che2373@79OX',
+      name: 'Pharmacist Bhal',
+      id: 'pharm_002',
+      role: 'pharmacy'
+    },
+    {
+      username: 'che_lol_2215',
+      password: 'che2215@SED1',
+      name: 'Pharmacist Lol',
+      id: 'pharm_003',
+      role: 'pharmacy'
+    },
+    {
+      username: 'patient1',
+      password: 'patient123',
+      name: 'Amit Sharma',
+      id: 'pat_001',
+      role: 'patient'
+    }
+  ];
+
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       // Check if admin credentials
       if (username.toLowerCase() === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
         const adminUser: User = {
           id: ADMIN_CREDENTIALS.id,
-          email: 'admin@sihmedical.com', // Keep email for display purposes
+          email: 'admin@sihmedical.com',
           name: ADMIN_CREDENTIALS.name,
           role: 'admin',
           isAdmin: true
@@ -58,29 +104,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
 
-      // Regular user authentication (mock implementation)
-      // In production, this would call your backend API
-      if (username && password) {
-        // Simulate different user types based on username
-        let userRole: 'doctor' | 'patient' | 'pharmacy' = 'patient';
-        let userName = username;
-        
-        if (username.toLowerCase().includes('doctor') || username.toLowerCase().includes('dr')) {
-          userRole = 'doctor';
-          userName = `Dr. ${username}`;
-        } else if (username.toLowerCase().includes('chemist') || username.toLowerCase().includes('pharmacy')) {
-          userRole = 'pharmacy';
-          userName = `${username} Pharmacy`;
-        }
-
-        const regularUser: User = {
-          id: 'user_' + Date.now(),
-          email: username + '@sihmedical.com', // Generate email from username
-          name: userName, // Use username as name
-          role: userRole,
-          isAdmin: false
+      // Check test credentials (for development)
+      const testUser = TEST_CREDENTIALS.find(cred => 
+        cred.username.toLowerCase() === username.toLowerCase() && cred.password === password
+      );
+      
+      if (testUser) {
+        const user: User = {
+          id: testUser.id,
+          email: `${testUser.username}@sihmedical.com`,
+          name: testUser.name,
+          role: testUser.role,
+          isAdmin: testUser.role === 'admin'
         };
-        setUserState(regularUser);
+        setUserState(user);
+        return true;
+      }
+
+      // Check approved users from registration system
+      const approvedUser = await RegistrationApprovalService.authenticateUser(username, password);
+      if (approvedUser) {
+        const user: User = {
+          id: approvedUser.id,
+          email: approvedUser.email,
+          name: approvedUser.fullName,
+          role: approvedUser.role,
+          isAdmin: approvedUser.role === 'admin'
+        };
+        setUserState(user);
         return true;
       }
 

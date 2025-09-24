@@ -28,7 +28,7 @@ interface PatientDashboardProps {
 const { width } = Dimensions.get('window');
 
 const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t, speak } = useLanguage();
 
   // Voice navigation handler
@@ -109,40 +109,40 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   const patientServices = [
     {
       id: '1',
-      title: 'Book Consultation',
-      description: 'Schedule appointment with doctors',
+      title: t('patient.book_consultation'),
+      description: t('patient.book_consultation_desc'),
       icon: '🩺',
       color: '#3b82f6',
       action: () => setConsultationModalVisible(true),
     },
     {
       id: '2',
-      title: 'View Prescriptions',
-      description: 'Access your medical prescriptions',
+      title: t('patient.view_prescriptions'),
+      description: t('patient.view_prescriptions_desc'),
       icon: '📋',
       color: '#10b981',
       action: () => setPrescriptionModalVisible(true),
     },
     {
       id: '3',
-      title: 'Health Records',
-      description: 'Offline health records & vital signs',
+      title: t('patient.health_records'),
+      description: t('patient.health_records_desc'),
       icon: '📊',
       color: '#f59e0b',
       action: () => setHealthRecordsModalVisible(true),
     },
     {
       id: '4',
-      title: 'Emergency Services',
-      description: 'Quick access to emergency help',
+      title: t('patient.emergency_services'),
+      description: t('patient.emergency_services_desc'),
       icon: '🚨',
       color: '#dc2626',
       action: () => setEmergencyModalVisible(true),
     },
     {
       id: '5',
-      title: 'AI Symptom Checker',
-      description: 'Smart symptom assessment & recommendations',
+      title: t('patient.ai_symptom_checker'),
+      description: t('patient.ai_symptom_checker_desc'),
       icon: '🤖',
       color: '#7c3aed',
       action: () => setSymptomCheckerModalVisible(true),
@@ -175,8 +175,30 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Good day, {user?.name || 'Patient'}!</Text>
-        <Text style={styles.subtitle}>How can we help you today?</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.greeting}>{t('patient.welcome')} {user?.name || t('patient.title')}!</Text>
+            <Text style={styles.subtitle}>{t('patient.subtitle')}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={() => {
+              Alert.alert(
+                t('common.logout'),
+                t('common.logout_confirm'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  { text: t('common.logout'), style: 'destructive', onPress: () => {
+                    logout();
+                    navigation.navigate('Login');
+                  }}
+                ]
+              );
+            }}
+          >
+            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Quick Stats */}
@@ -197,7 +219,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
 
       {/* Patient Services */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Patient Services</Text>
+        <Text style={styles.sectionTitle}>{t('patient.services_title')}</Text>
         <View style={styles.servicesGrid}>
           {patientServices.map((service) => (
             <TouchableOpacity
@@ -215,7 +237,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
 
       {/* Recent Activity */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={styles.sectionTitle}>{t('patient.recent_activity')}</Text>
         {recentActivity.map((activity) => (
           <View key={activity.id} style={styles.activityCard}>
             <View style={styles.activityContent}>
@@ -236,7 +258,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Book Consultation</Text>
+              <Text style={styles.modalTitle}>{t('patient.book_consultation')}</Text>
               <TouchableOpacity onPress={() => setConsultationModalVisible(false)}>
                 <Text style={styles.closeButton}>×</Text>
               </TouchableOpacity>
@@ -478,6 +500,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     padding: 20,
     paddingTop: 40,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   greeting: {
     fontSize: 24,

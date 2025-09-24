@@ -135,7 +135,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
 
   const addMedication = () => {
     if (!newMedication.name || !newMedication.dosage) {
-      Alert.alert('Error', 'Please enter medication name and dosage');
+      Alert.alert(t('common.error'), t('session.medication_name_dosage_required'));
       return;
     }
 
@@ -175,13 +175,13 @@ const SessionManager: React.FC<SessionManagerProps> = ({
 
   const completeSession = () => {
     if (!localSession.assessmentNotes.trim()) {
-      Alert.alert('Incomplete Session', 'Please add assessment notes before completing the session.');
+      Alert.alert(t('session.incomplete_session'), t('session.add_assessment_notes'));
       return;
     }
 
     Alert.alert(
-      'Complete Session',
-      'Are you sure you want to complete this session? This action cannot be undone.',
+      t('session.complete_session'),
+      t('session.complete_session_confirmation'),
       [
         { text: 'Cancel', style: 'cancel' },
         {

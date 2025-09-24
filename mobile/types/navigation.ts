@@ -37,4 +37,5 @@ export type RootStackParamList = {
   TelemedicineSystem: undefined;
   MedicineAvailabilityTracker: undefined;
   CHWDashboard: undefined;
+  LanguageSettings: undefined;
 };
