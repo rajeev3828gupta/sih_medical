@@ -105,6 +105,13 @@ const translations = {
     'doctor.reports': 'Lab Reports',
     'doctor.schedule': 'Schedule',
     'doctor.patients': 'Patient Records',
+    'doctor.emergency_cases': 'Emergency Cases',
+    'doctor.emergency_cases_desc': 'Handle urgent medical cases',
+    'doctor.income': 'Monthly Income',
+    'doctor.consultations_desc': 'View and manage consultations',
+    'doctor.patients_desc': 'Access patient records',
+    'doctor.telemedicine_desc': 'Video/Audio consultations',
+    'doctor.reports_desc': 'Review lab reports',
     
     // Chemist Dashboard
     'chemist.title': 'Pharmacist',
@@ -437,6 +444,13 @@ const translations = {
     'doctor.reports': 'लैब रिपोर्ट',
     'doctor.schedule': 'शेड्यूल',
     'doctor.patients': 'मरीज़ों के रिकॉर्ड',
+    'doctor.emergency_cases': 'आपातकालीन मामले',
+    'doctor.emergency_cases_desc': 'तत्काल चिकित्सा मामलों को संभालें',
+    'doctor.income': 'मासिक आय',
+    'doctor.consultations_desc': 'परामर्श देखें और प्रबंधित करें',
+    'doctor.patients_desc': 'मरीज़ों के रिकॉर्ड तक पहुंचें',
+    'doctor.telemedicine_desc': 'वीडियो/ऑडियो परामर्श',
+    'doctor.reports_desc': 'लैब रिपोर्ट की समीक्षा करें',
     
     // Chemist Dashboard
     'chemist.title': 'फार्मासिस्ट',
@@ -731,6 +745,13 @@ const translations = {
     'doctor.reports': 'ਲੈਬ ਰਿਪੋਰਟਾਂ',
     'doctor.schedule': 'ਸਮਾਂ-ਸਾਰਣੀ',
     'doctor.patients': 'ਮਰੀਜ਼ਾਂ ਦੇ ਰਿਕਾਰਡ',
+    'doctor.emergency_cases': 'ਐਮਰਜੈਂਸੀ ਮਾਮਲੇ',
+    'doctor.emergency_cases_desc': 'ਤੁਰੰਤ ਮੈਡੀਕਲ ਮਾਮਲਿਆਂ ਨੂੰ ਸੰਭਾਲੋ',
+    'doctor.income': 'ਮਹੀਨਾਵਾਰ ਆਮਦਨ',
+    'doctor.consultations_desc': 'ਸਲਾਹ-ਮਸ਼ਵਰੇ ਵੇਖੋ ਅਤੇ ਪ੍ਰਬੰਧਿਤ ਕਰੋ',
+    'doctor.patients_desc': 'ਮਰੀਜ਼ਾਂ ਦੇ ਰਿਕਾਰਡ ਤੱਕ ਪਹੁੰਚ',
+    'doctor.telemedicine_desc': 'ਵੀਡੀਓ/ਆਡੀਓ ਸਲਾਹ-ਮਸ਼ਵਰੇ',
+    'doctor.reports_desc': 'ਲੈਬ ਰਿਪੋਰਟਾਂ ਦੀ ਸਮੀਖਿਆ ਕਰੋ',
     
     // Chemist Dashboard
     'chemist.title': 'ਫਾਰਮਾਸਿਸਟ',
