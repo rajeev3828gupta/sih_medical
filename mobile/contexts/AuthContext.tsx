@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RegistrationApprovalService } from '../services/RegistrationApprovalService';
 
 interface User {
@@ -13,8 +14,9 @@ interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setUser: (user: User) => void;
 }
 
@@ -34,6 +36,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUserState] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Admin credentials (in production, this should be secured)
   const ADMIN_CREDENTIALS = {
@@ -89,6 +92,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   ];
 
+  // Initialize auth state from storage
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUserState(parsedUser);
+        }
+      } catch (error) {
+        console.error('Error loading stored user:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       // Check if admin credentials
@@ -101,6 +123,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isAdmin: true
         };
         setUserState(adminUser);
+        await AsyncStorage.setItem('user', JSON.stringify(adminUser));
         return true;
       }
 
@@ -118,6 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isAdmin: testUser.role === 'admin'
         };
         setUserState(user);
+        await AsyncStorage.setItem('user', JSON.stringify(user));
         return true;
       }
 
@@ -132,6 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isAdmin: approvedUser.role === 'admin'
         };
         setUserState(user);
+        await AsyncStorage.setItem('user', JSON.stringify(user));
         return true;
       }
 
@@ -142,8 +167,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUserState(null);
+    await AsyncStorage.removeItem('user');
   };
 
   const setUser = (newUser: User) => {
@@ -154,6 +180,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isLoggedIn: !!user,
     isAdmin: user?.isAdmin || false,
+    isLoading,
     login,
     logout,
     setUser

@@ -38,8 +38,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
       fullName: '',
       email: '',
       phone: '',
-      password: '',
-      confirmPassword: '',
       // Doctor specific
       medicalLicense: '',
       specialization: '',
@@ -253,28 +251,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               placeholder={t('register.enter_phone')}
               placeholderTextColor="#64748b"
               keyboardType="phone-pad"
-            />
-          </View>
-  
-          <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>{t('register.password')}</Text>
-            <TextInput
-              style={styles.formInput}
-              value={formData.password}
-              onChangeText={(text) => handleInputChange('password', text)}
-              placeholder={t('register.create_password')}
-              placeholderTextColor="#64748b"
-            />
-          </View>
-  
-          <View style={styles.inputGroup}>
-            <Text style={styles.formInputLabel}>{t('register.confirm_password')}</Text>
-            <TextInput
-              style={styles.formInput}
-              value={formData.confirmPassword}
-              onChangeText={(text) => handleInputChange('confirmPassword', text)}
-              placeholder={t('register.confirm_password_placeholder')}
-              placeholderTextColor="#64748b"
             />
           </View>
   

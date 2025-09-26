@@ -25,7 +25,16 @@ import AISymptomChecker from './AISymptomChecker';
 import OfflineHealthRecords from './OfflineHealthRecords';
 
 // Service Imports
-import { DoctorService, Doctor } from '../services/DoctorService';
+import { DoctorService, Doctor, ConsultationBooking } from '../services/DoctorService';
+import { syncManager } from '../services/SyncManager';
+import { useSyncedConsultations, useSyncedAppointments, useSyncedPrescriptions, useSyncedDoctors } from '../hooks/useSyncedData';
+import { useGlobalSync, useRoleBasedData, useRealtimeNotifications } from '../hooks/useGlobalSync';
+
+// Extended consultation type for sync system with additional display fields
+interface SyncedConsultation extends ConsultationBooking {
+  doctorName?: string;
+  patientName?: string;
+}
 
 type PatientDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -50,13 +59,26 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [appointmentModalVisible, setAppointmentModalVisible] = useState(false);
   const [symptomCheckerModalVisible, setSymptomCheckerModalVisible] = useState(false);
+  
+  // Reschedule appointment modal states
+  const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
+  const [selectedAppointmentForAction, setSelectedAppointmentForAction] = useState<any>(null);
+  const [newAppointmentDate, setNewAppointmentDate] = useState('');
+  const [newAppointmentTime, setNewAppointmentTime] = useState('');
   const [healthRecordsModalVisible, setHealthRecordsModalVisible] = useState(false);
 
   // ============================================================================
-  // DOCTOR AND CONSULTATION STATES
+  // DOCTOR AND CONSULTATION STATES - Using real-time sync
   // ============================================================================
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const { 
+    data: doctors, 
+    addData: addDoctor, 
+    updateData: updateDoctor,
+    deleteData: deleteDoctor,
+    syncStatus: doctorSyncStatus,
+    isLoading: loadingDoctors,
+    refreshData: refreshDoctors
+  } = useSyncedDoctors();
   const [selectedCommunicationMode, setSelectedCommunicationMode] = useState<'chat' | 'video' | 'audio' | 'in-person' | 'media' | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [consultationDate, setConsultationDate] = useState('');
@@ -100,15 +122,52 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   const [isUploading, setIsUploading] = useState(false);
 
   // ============================================================================
-  // SAMPLE DATA FOR DEMO/MOCK PURPOSES
+  // REAL-TIME SYNCED DATA
   // ============================================================================
-  const [appointments, setAppointments] = useState([
+  const { 
+    data: appointments, 
+    addData: addAppointment, 
+    updateData: updateAppointment,
+    deleteData: deleteAppointment,
+    syncStatus: appointmentSyncStatus,
+    isLoading: appointmentsLoading 
+  } = useSyncedAppointments();
+  
+  // Global sync integration for multi-device real-time updates
+  const globalSync = useGlobalSync(user);
+  const roleBasedData = useRoleBasedData(user, {
+    consultations: globalSync.consultations,
+    appointments: globalSync.appointments,
+    prescriptions: globalSync.prescriptions,
+    doctors: globalSync.doctors
+  });
+  const notifications = useRealtimeNotifications(user);
+
+  // Legacy hooks (kept for compatibility but will use global sync data)
+  const { 
+    data: consultations, 
+    addData: addConsultation, 
+    updateData: updateConsultation,
+    deleteData: deleteConsultation,
+    syncStatus: consultationSyncStatus 
+  } = useSyncedConsultations();
+  
+  const { 
+    data: prescriptions, 
+    addData: addPrescription, 
+    updateData: updatePrescription,
+    syncStatus: prescriptionSyncStatus 
+  } = useSyncedPrescriptions();
+
+  // Legacy sample data for initial setup (will be migrated to synced data)
+  const sampleAppointments = [
     { id: '1', doctor: 'Dr. Sharma', date: '2024-01-20', time: '10:00 AM', type: 'General Consultation', status: 'Confirmed' },
     { id: '2', doctor: 'Dr. Patel', date: '2024-01-25', time: '2:30 PM', type: 'Follow-up', status: 'Pending' },
     { id: '3', doctor: 'Dr. Gupta', date: '2024-01-28', time: '11:15 AM', type: 'Specialist Consultation', status: 'Confirmed' },
-  ]);
+  ];
 
-  const [prescriptions, setPrescriptions] = useState([
+  // Sample prescription data (will be migrated to synced data)
+  const samplePrescriptions = [
     { 
       id: '1', 
       doctor: 'Dr. Rajesh Kumar Sharma', 
@@ -207,7 +266,39 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         }
       ]
     },
-  ]);
+  ];
+
+  // Use synced data if available, otherwise fall back to sample data
+  const displayPrescriptions = prescriptions.length > 0 ? prescriptions : samplePrescriptions;
+  // Use global sync data for real-time updates
+  const globalAppointments = roleBasedData.myAppointments || [];
+  const globalConsultations = roleBasedData.myConsultations || [];
+  
+  // Combine appointments and consultations for display
+  const combinedAppointments = [
+    ...globalAppointments,
+    ...globalConsultations.map((c: any) => ({
+      id: c.id,
+      doctor: c.doctorName || 'Unknown Doctor',
+      doctorName: c.doctorName || 'Unknown Doctor', 
+      date: c.scheduledDate,
+      time: c.scheduledTime,
+      type: c.type ? c.type.charAt(0).toUpperCase() + c.type.slice(1) + ' Consultation' : 'Consultation',
+      status: c.status,
+      statusDisplay: c.status === 'scheduled' ? 'Pending Request' :
+                   c.status === 'confirmed' ? 'Accepted - Scheduled' :
+                   c.status === 'in-progress' ? 'In Progress' :
+                   c.status === 'completed' ? 'Completed' : 
+                   c.status.charAt(0).toUpperCase() + c.status.slice(1),
+      symptoms: c.symptoms,
+      createdAt: c.createdAt,
+      originalConsultation: c
+    }))
+  ];
+
+  // Filter out cancelled appointments - they should be removed from the list
+  const activeAppointments = combinedAppointments.filter((apt: any) => apt.status !== 'cancelled');
+  const displayAppointments = activeAppointments.length > 0 ? activeAppointments : sampleAppointments;
 
   const [medicalHistory, setMedicalHistory] = useState([
     { id: '1', date: '2024-01-15', diagnosis: 'Common Cold', doctor: 'Dr. Sharma', treatment: 'Rest and medication' },
@@ -218,10 +309,17 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   // ============================================================================
   // EFFECTS AND DATA LOADING
   // ============================================================================
+  
+  // Watch for changes in consultations and reload appointments when they change
   useEffect(() => {
-    loadDoctors();
+    console.log('Consultations changed, reloading patient appointments...');
+    loadPatientAppointments();
+  }, [consultations]);
+
+  useEffect(() => {
     loadPatientPrescriptions();
     loadPatientAppointments();
+    initializeDoctorData();
     
     // Set up auto-refresh every 30 seconds for real-time updates
     const refreshInterval = setInterval(() => {
@@ -247,6 +345,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
     try {
       if (user?.id) {
         console.log('Loading appointments for patient:', user.id);
+        console.log('Total synced consultations:', consultations.length);
         
         // Try multiple patient ID formats
         const possiblePatientIds = [
@@ -257,12 +356,16 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         
         let patientConsultations: any[] = [];
         
-        // Try each possible patient ID
+        // Filter synced consultations for this patient using multiple possible IDs
         for (const patientId of possiblePatientIds) {
           if (patientId) {
-            const consultations = await DoctorService.getPatientConsultations(patientId);
-            if (consultations.length > 0) {
-              patientConsultations = consultations;
+            const consultationsForPatient = consultations.filter((consultation: SyncedConsultation) => {
+              const matches = consultation.patientId === patientId;
+              if (matches) console.log(`Found matching consultation: ${consultation.id} for ${patientId}`);
+              return matches;
+            });
+            if (consultationsForPatient.length > 0) {
+              patientConsultations = consultationsForPatient as SyncedConsultation[];
               console.log(`Found ${patientConsultations.length} appointments for patient ID: ${patientId}`);
               break;
             }
@@ -270,51 +373,40 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         }
         
         if (patientConsultations.length > 0) {
-          // Convert consultations to appointment format with proper doctor name resolution
-          const realAppointments = await Promise.all(
-            patientConsultations.map(async (consultation) => {
-              // Try to get doctor details
-              let doctorName = consultation.doctorId;
-              try {
-                const doctor = await DoctorService.getDoctorById(consultation.doctorId);
-                if (doctor) {
-                  doctorName = `Dr. ${doctor.fullName}`;
-                } else {
-                  // Fallback: format the doctor ID nicely
-                  doctorName = consultation.doctorId
-                    .replace('doc_', 'Dr. ')
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (l: string) => l.toUpperCase());
-                }
-              } catch (error) {
-                console.log('Could not resolve doctor name for', consultation.doctorId);
-              }
-              
-              return {
-                id: consultation.id,
-                doctor: doctorName,
-                date: consultation.scheduledDate,
-                time: consultation.scheduledTime,
-                type: consultation.type.charAt(0).toUpperCase() + consultation.type.slice(1) + ' Consultation',
-                status: consultation.status,
-                statusDisplay: consultation.status === 'scheduled' ? 'Pending Request' :
-                             consultation.status === 'confirmed' ? 'Accepted - Scheduled' :
-                             consultation.status === 'in-progress' ? 'In Progress' :
-                             consultation.status === 'completed' ? 'Completed' : 
-                             consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1),
-                symptoms: consultation.symptoms,
-                createdAt: consultation.createdAt,
-                originalConsultation: consultation
-              };
-            })
-          );
+          // Convert consultations to appointment format (doctor name is already included)
+          const realAppointments = patientConsultations.map((consultation: SyncedConsultation) => {
+            return {
+              id: consultation.id,
+              doctor: consultation.doctorName || 'Unknown Doctor',
+              doctorName: consultation.doctorName || 'Unknown Doctor',
+              date: consultation.scheduledDate,
+              time: consultation.scheduledTime,
+              type: consultation.type.charAt(0).toUpperCase() + consultation.type.slice(1) + ' Consultation',
+              status: consultation.status,
+              statusDisplay: consultation.status === 'scheduled' ? 'Pending Request' :
+                           consultation.status === 'confirmed' ? 'Accepted - Scheduled' :
+                           consultation.status === 'in-progress' ? 'In Progress' :
+                           consultation.status === 'completed' ? 'Completed' : 
+                           consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1),
+              symptoms: consultation.symptoms,
+              createdAt: consultation.createdAt,
+              originalConsultation: consultation
+            };
+          });
           
           // Sort by creation date (newest first)
-          realAppointments.sort((a, b) => 
+          realAppointments.sort((a: any, b: any) => 
             new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
           );
           
-          setAppointments(realAppointments);
+          // Add appointments to sync service (optional - sync may not be initialized)
+          for (const appointment of realAppointments) {
+            try {
+              await addAppointment(appointment);
+            } catch (error) {
+              console.log('Sync not available, using local data only:', error);
+            }
+          }
           console.log('Updated appointments with real data:', realAppointments.length);
           console.log('Appointments:', realAppointments);
         } else {
@@ -367,7 +459,14 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
           }));
           
           console.log('Setting prescriptions:', convertedPrescriptions.length);
-          setPrescriptions(convertedPrescriptions);
+          // Add prescriptions to sync service (optional - sync may not be initialized)
+          for (const prescription of convertedPrescriptions) {
+            try {
+              await addPrescription(prescription);
+            } catch (error) {
+              console.log('Sync not available, using local data only:', error);
+            }
+          }
         } else {
           console.log('No prescriptions found for any patient ID');
         }
@@ -377,18 +476,135 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
     }
   };
 
-  const loadDoctors = async () => {
+  // Initialize doctor data from DoctorService to sync system
+  const initializeDoctorData = async () => {
     try {
-      setLoadingDoctors(true);
+      console.log('🔄 Initializing doctor data from DoctorService...');
       const approvedDoctors = await DoctorService.getApprovedDoctors();
-      setDoctors(approvedDoctors);
+      console.log('📋 Approved doctors from DoctorService:', approvedDoctors.length, approvedDoctors.map(d => d.fullName));
+      
+      // Check current synced doctors
+      console.log('📋 Current synced doctors:', doctors.length, doctors.map((d: any) => d.fullName || d.name));
+      console.log('📋 Doctor ID mapping for debugging:');
+      doctors.forEach((d: any) => {
+        console.log(`  - ${d.fullName || d.name}: ${d.id} (role: ${d.role})`);
+      });
+      
+      // Debug: Check all storage locations
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const doctorsInStorage = await AsyncStorage.getItem('doctors');
+      const appUsersInStorage = await AsyncStorage.getItem('app_users');
+      console.log('🗄️ Doctors in AsyncStorage (doctors key):', doctorsInStorage ? JSON.parse(doctorsInStorage).length : 0);
+      console.log('🗄️ Users in AsyncStorage (app_users key):', appUsersInStorage ? JSON.parse(appUsersInStorage).length : 0);
+      
+      // Check if current user (Rishav) is in the users
+      if (appUsersInStorage) {
+        const allUsers = JSON.parse(appUsersInStorage);
+        const currentUser = allUsers.find((u: any) => u.name === 'Rishav' || u.id === 'reg_1758816033191_35h2ulf1d');
+        console.log('👤 Current user (Rishav) found in app_users:', currentUser ? 'YES' : 'NO');
+        if (currentUser) {
+          console.log('👤 Rishav details:', {
+            id: currentUser.id,
+            name: currentUser.name,
+            role: currentUser.role,
+            email: currentUser.email,
+            hasSpecialization: !!currentUser.specialization,
+            hasHospital: !!currentUser.hospital
+          });
+        }
+      }
+      
+      // Check if the currently logged-in user is a doctor and add them to sync system
+      console.log('👤 Checking currently logged-in user:', { 
+        userId: user?.id, 
+        userName: user?.name, 
+        userRole: user?.role 
+      });
+      
+      if (user && user.role === 'doctor') {
+        console.log('👤 Current logged-in user is a doctor, adding to doctors list:', user.name);
+        const currentDoctorData = {
+          id: user.id,
+          fullName: user.name || 'Unknown Doctor',
+          specialization: (user as any).specialization || 'General Medicine',
+          hospital: (user as any).hospital || 'General Hospital',  
+          email: user.email,
+          phone: (user as any).phone || '',
+          experience: (user as any).experience || '5 years',
+          qualifications: (user as any).qualifications || 'MBBS',
+          consultationFee: (user as any).consultationFee || '500',
+          isAvailable: true,
+          rating: 4.5
+        };
+        
+        try {
+          console.log(`➕ Adding current logged-in doctor to sync: ${currentDoctorData.fullName} (${user.id})`);
+          await addDoctor(currentDoctorData);
+        } catch (error) {
+          console.log(`✅ Current doctor ${currentDoctorData.fullName} already exists in sync system`);
+        }
+      } else {
+        console.log('👤 Current logged-in user is not a doctor or user is null');
+      }
+      
+      // Always check app_users for doctor roles (not just when approved doctors is empty)
+      if (appUsersInStorage) {
+        console.log('🔍 Checking app_users for doctor roles...');
+        const allUsers = JSON.parse(appUsersInStorage);
+        const doctorUsers = allUsers.filter((user: any) => user.role === 'doctor');
+        console.log('👨‍⚕️ Found doctor users in app_users:', doctorUsers.length, doctorUsers.map((d: any) => d.name || d.fullName));
+        
+        // Convert doctor users to doctor format and add to sync
+        for (const doctorUser of doctorUsers) {
+          const doctorData = {
+            id: doctorUser.id,
+            fullName: doctorUser.name || doctorUser.fullName || 'Unknown Doctor',
+            specialization: doctorUser.specialization || 'General Medicine',
+            hospital: doctorUser.hospital || 'General Hospital',
+            email: doctorUser.email,
+            phone: doctorUser.phone || '',
+            experience: doctorUser.experience || '5 years',
+            qualifications: doctorUser.qualifications || 'MBBS',
+            consultationFee: doctorUser.consultationFee || '500',
+            isAvailable: true,
+            rating: 4.5
+          };
+          
+          try {
+            console.log(`➕ Adding doctor user to sync: ${doctorData.fullName} (${doctorUser.id})`);
+            await addDoctor(doctorData);
+          } catch (error) {
+            console.log(`Doctor ${doctorData.fullName} already exists in sync system:`, error);
+          }
+        }
+        
+        console.log(`✅ Processed ${doctorUsers.length} doctor users from app_users`);
+      }
+      
+      // Add each approved doctor to the sync system if they don't exist
+      for (const doctor of approvedDoctors) {
+        try {
+          console.log(`➕ Adding approved doctor to sync: ${doctor.fullName}`);
+          await addDoctor(doctor);
+        } catch (error) {
+          console.log(`Doctor ${doctor.fullName} already exists in sync system:`, error);
+        }
+      }
+      
+      // Force refresh the doctors data
+      await refreshDoctors();
+      
+      // Final check
+      const finalDoctorsInStorage = await AsyncStorage.getItem('doctors');
+      console.log('✅ Final doctors in sync storage:', finalDoctorsInStorage ? JSON.parse(finalDoctorsInStorage).length : 0);
+      console.log(`✅ Initialized doctors in sync system - Approved: ${approvedDoctors.length}, Total in sync: ${doctors.length}`);
+      
     } catch (error) {
-      console.error('Error loading doctors:', error);
-      Alert.alert('Error', 'Failed to load doctors. Please try again.');
-    } finally {
-      setLoadingDoctors(false);
+      console.error('❌ Error initializing doctor data:', error);
     }
   };
+
+
 
   // ============================================================================
   // CONSULTATION BOOKING HANDLERS
@@ -418,8 +634,18 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         return;
       }
 
-      // Add fallback for known doctor ID for testing
-      const doctorIdToUse = selectedDoctor.id === 'user_1' ? 'doc_taru_4433' : selectedDoctor.id;
+      // Handle doctor ID mapping - check if this is a special case
+      let doctorIdToUse = selectedDoctor.id;
+      
+      // Handle legacy mapping cases
+      if (selectedDoctor.id === 'user_1') {
+        doctorIdToUse = 'doc_taru_4433';
+      } else if (selectedDoctor.fullName?.toLowerCase().includes('rishav')) {
+        // Find the actual Rishav user ID from the users list
+        doctorIdToUse = 'reg_1758816033191_35h2ulf1d'; // Use the specific ID found in the code
+      }
+      
+      console.log('Doctor ID mapping:', selectedDoctor.id, '->', doctorIdToUse);
       const patientIdToUse = user?.id === 'user_2' ? 'pat_hell_8248' : (user?.id || 'patient_1');
 
       // Map communication mode to consultation type for backend compatibility
@@ -438,10 +664,16 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       };
 
       console.log('=== PATIENT BOOKING DEBUG ===');
+      console.log('Selected doctor full details:', selectedDoctor);
       console.log('Selected doctor ID:', selectedDoctor.id);
+      console.log('Selected doctor name:', selectedDoctor.fullName);
       console.log('Doctor ID to use:', doctorIdToUse);
       console.log('Patient ID to use:', patientIdToUse);
       console.log('Full consultation data:', consultationData);
+      console.log('=== AVAILABLE DOCTORS FOR DEBUGGING ===');
+      doctors.forEach((d: any) => {
+        console.log(`  - Name: ${d.fullName || d.name}, ID: ${d.id}, Role: ${d.role}`);
+      });
       console.log('=== END BOOKING DEBUG ===');
 
       if (selectedCommunicationMode === 'video') {
@@ -454,14 +686,25 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
               text: 'Start Call',
               onPress: async () => {
                 try {
-                  const consultationId = await DoctorService.bookConsultation(
-                    consultationData.doctorId,
-                    consultationData.patientId,
-                    consultationData.type,
-                    consultationData.scheduledDate,
-                    consultationData.scheduledTime,
-                    consultationData.symptoms
-                  );
+                  const consultationId = `consult_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                  
+                  // Create consultation using sync system instead of DoctorService
+                  const syncConsultationData: SyncedConsultation = {
+                    id: consultationId,
+                    doctorId: consultationData.doctorId,
+                    patientId: consultationData.patientId,
+                    doctorName: selectedDoctor.fullName,
+                    patientName: user?.name || 'Unknown Patient',
+                    type: consultationData.type,
+                    scheduledDate: consultationData.scheduledDate,
+                    scheduledTime: consultationData.scheduledTime,
+                    status: 'scheduled' as const,
+                    symptoms: consultationData.symptoms,
+                    createdAt: new Date().toISOString(),
+                  };
+
+                  // Add to sync system for real-time updates
+                  await addConsultation(syncConsultationData);
                   
                   const { meetingUrl } = await DoctorService.startVideoConsultation(consultationId);
                   
@@ -477,6 +720,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                     }}]
                   );
                 } catch (error) {
+                  console.error('Error starting video consultation:', error);
                   Alert.alert('Error', 'Failed to start video consultation');
                 }
               }
@@ -493,14 +737,25 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
               text: 'Start Call',
               onPress: async () => {
                 try {
-                  const consultationId = await DoctorService.bookConsultation(
-                    consultationData.doctorId,
-                    consultationData.patientId,
-                    consultationData.type,
-                    consultationData.scheduledDate,
-                    consultationData.scheduledTime,
-                    consultationData.symptoms
-                  );
+                  const consultationId = `consult_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                  
+                  // Create consultation using sync system instead of DoctorService
+                  const syncConsultationData: SyncedConsultation = {
+                    id: consultationId,
+                    doctorId: consultationData.doctorId,
+                    patientId: consultationData.patientId,
+                    doctorName: selectedDoctor.fullName,
+                    patientName: user?.name || 'Unknown Patient',
+                    type: consultationData.type,
+                    scheduledDate: consultationData.scheduledDate,
+                    scheduledTime: consultationData.scheduledTime,
+                    status: 'scheduled' as const,
+                    symptoms: consultationData.symptoms,
+                    createdAt: new Date().toISOString(),
+                  };
+
+                  // Add to sync system for real-time updates
+                  await addConsultation(syncConsultationData);
                   
                   const { callUrl } = await DoctorService.startAudioConsultation(consultationId);
                   
@@ -523,6 +778,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                     ]
                   );
                 } catch (error) {
+                  console.error('Error starting audio consultation:', error);
                   Alert.alert('Error', 'Failed to start audio consultation');
                 }
               }
@@ -539,14 +795,25 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
               text: 'Start Chat',
               onPress: async () => {
                 try {
-                  const consultationId = await DoctorService.bookConsultation(
-                    consultationData.doctorId,
-                    consultationData.patientId,
-                    consultationData.type,
-                    consultationData.scheduledDate,
-                    consultationData.scheduledTime,
-                    consultationData.symptoms
-                  );
+                  const consultationId = `consult_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                  
+                  // Create consultation using sync system instead of DoctorService
+                  const syncConsultationData: SyncedConsultation = {
+                    id: consultationId,
+                    doctorId: consultationData.doctorId,
+                    patientId: consultationData.patientId,
+                    doctorName: selectedDoctor.fullName,
+                    patientName: user?.name || 'Unknown Patient',
+                    type: consultationData.type,
+                    scheduledDate: consultationData.scheduledDate,
+                    scheduledTime: consultationData.scheduledTime,
+                    status: 'scheduled' as const,
+                    symptoms: consultationData.symptoms,
+                    createdAt: new Date().toISOString(),
+                  };
+
+                  // Add to sync system for real-time updates
+                  await addConsultation(syncConsultationData);
                   
                   Alert.alert(
                     'Chat Consultation Started',
@@ -560,6 +827,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                     }}]
                   );
                 } catch (error) {
+                  console.error('Error starting chat consultation:', error);
                   Alert.alert('Error', 'Failed to start chat consultation');
                 }
               }
@@ -579,14 +847,25 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
               text: 'Book Appointment',
               onPress: async () => {
                 try {
-                  const consultationId = await DoctorService.bookConsultation(
-                    consultationData.doctorId,
-                    consultationData.patientId,
-                    consultationData.type,
-                    consultationData.scheduledDate,
-                    consultationData.scheduledTime,
-                    consultationData.symptoms
-                  );
+                  const consultationId = `consult_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                  
+                  // Create consultation using sync system instead of DoctorService
+                  const syncConsultationData: SyncedConsultation = {
+                    id: consultationId,
+                    doctorId: consultationData.doctorId,
+                    patientId: consultationData.patientId,
+                    doctorName: selectedDoctor.fullName,
+                    patientName: user?.name || 'Unknown Patient',
+                    type: consultationData.type,
+                    scheduledDate: consultationData.scheduledDate,
+                    scheduledTime: consultationData.scheduledTime,
+                    status: 'scheduled' as const,
+                    symptoms: consultationData.symptoms,
+                    createdAt: new Date().toISOString(),
+                  };
+
+                  // Add to sync system for real-time updates
+                  await addConsultation(syncConsultationData);
                   
                   Alert.alert(
                     'Appointment Booked Successfully',
@@ -600,6 +879,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                     }}]
                   );
                 } catch (error) {
+                  console.error('Error booking appointment:', error);
                   Alert.alert('Error', 'Failed to book appointment');
                 }
               }
@@ -627,6 +907,113 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       preferredTime: '',
       additionalNotes: ''
     });
+  };
+
+  // ============================================================================
+  // APPOINTMENT MANAGEMENT HANDLERS
+  // ============================================================================
+  
+  const handleRescheduleAppointment = (appointment: any) => {
+    setSelectedAppointmentForAction(appointment);
+    setNewAppointmentDate(appointment.date || '');
+    setNewAppointmentTime(appointment.time || '');
+    setRescheduleModalVisible(true);
+  };
+
+  const confirmReschedule = async () => {
+    if (!selectedAppointmentForAction || !newAppointmentDate || !newAppointmentTime) {
+      Alert.alert('Error', 'Please select both date and time for rescheduling.');
+      return;
+    }
+
+    try {
+      console.log('=== RESCHEDULE DEBUG ===');
+      console.log('Selected appointment:', selectedAppointmentForAction);
+      console.log('Original consultation:', selectedAppointmentForAction.originalConsultation);
+      console.log('New date:', newAppointmentDate);
+      console.log('New time:', newAppointmentTime);
+      
+      // Check if originalConsultation exists, if not use the appointment data directly
+      const consultationToUpdate = selectedAppointmentForAction.originalConsultation || {
+        ...selectedAppointmentForAction,
+        // Ensure we have all required fields for SyncedConsultation
+        doctorName: selectedAppointmentForAction.doctorName || selectedAppointmentForAction.doctor,
+        patientName: user?.name || 'Unknown Patient',
+        type: selectedAppointmentForAction.type || 'in-person',
+        symptoms: selectedAppointmentForAction.symptoms || '',
+        urgency: selectedAppointmentForAction.urgency || 'normal'
+      };
+
+      // Update the consultation in the sync system
+      const updatedConsultation: SyncedConsultation = {
+        ...consultationToUpdate,
+        scheduledDate: newAppointmentDate,
+        scheduledTime: newAppointmentTime,
+        status: 'scheduled' as const, // Keep as scheduled after reschedule
+      };
+
+      console.log('Updated consultation data:', updatedConsultation);
+      console.log('About to call updateConsultation with ID:', selectedAppointmentForAction.id);
+      
+      await updateConsultation(selectedAppointmentForAction.id, updatedConsultation);
+      console.log('✅ updateConsultation completed successfully');
+      
+      // Immediately refresh appointments to show updated information
+      await loadPatientAppointments();
+      
+      Alert.alert(
+        'Appointment Rescheduled',
+        `Your appointment with ${selectedAppointmentForAction.doctorName || selectedAppointmentForAction.doctor} has been rescheduled to ${newAppointmentDate} at ${newAppointmentTime}.`,
+        [{ text: 'OK', onPress: () => {
+          setRescheduleModalVisible(false);
+          setSelectedAppointmentForAction(null);
+        }}]
+      );
+    } catch (error) {
+      console.error('Error rescheduling appointment:', error);
+      console.error('Error details:', error);
+      Alert.alert('Error', `Failed to reschedule appointment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleCancelAppointment = (appointment: any) => {
+    Alert.alert(
+      'Cancel Appointment',
+      `Are you sure you want to cancel your appointment with ${appointment.doctorName || appointment.doctor}?\n\nDate: ${appointment.date}\nTime: ${appointment.time}\n\nThis action cannot be undone.`,
+      [
+        { text: 'Keep Appointment', style: 'cancel' },
+        {
+          text: 'Cancel Appointment',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('=== CANCEL DEBUG ===');
+              console.log('Appointment to cancel:', appointment);
+              console.log('Deleting appointment ID:', appointment.id);
+              console.log('About to call deleteConsultation...');
+              
+              // Delete the consultation completely from the sync system
+              // This will remove it from both patient and doctor dashboards
+              await deleteConsultation(appointment.id);
+              console.log('✅ deleteConsultation completed successfully');
+              
+              // Immediately refresh appointments to remove the cancelled appointment
+              await loadPatientAppointments();
+              
+              Alert.alert(
+                'Appointment Cancelled',
+                `Your appointment with ${appointment.doctorName || appointment.doctor} has been cancelled and removed.`,
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              console.error('Error cancelling appointment:', error);
+              console.error('Error details:', error);
+              Alert.alert('Error', `Failed to cancel appointment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
+        }
+      ]
+    );
   };
 
   // ============================================================================
@@ -698,8 +1085,18 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
     if (!selectedDoctor) return;
 
     try {
-      // Create a consultation with media files
-      const doctorIdToUse = selectedDoctor.id === 'user_1' ? 'doc_taru_4433' : selectedDoctor.id;
+      // Create a consultation with media files - Handle doctor ID mapping
+      let doctorIdToUse = selectedDoctor.id;
+      
+      // Handle legacy mapping cases
+      if (selectedDoctor.id === 'user_1') {
+        doctorIdToUse = 'doc_taru_4433';
+      } else if (selectedDoctor.fullName?.toLowerCase().includes('rishav')) {
+        // Find the actual Rishav user ID from the users list
+        doctorIdToUse = 'reg_1758816033191_35h2ulf1d'; // Use the specific ID found in the code
+      }
+      
+      console.log('Media sharing doctor ID mapping:', selectedDoctor.id, '->', doctorIdToUse);
       const patientIdToUse = user?.id === 'user_2' ? 'pat_hell_8248' : (user?.id || 'patient_1');
 
       const consultationId = await DoctorService.bookConsultation(
@@ -735,15 +1132,15 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   // PRESCRIPTION MANAGEMENT FUNCTIONS  
   // ============================================================================
   const getFilteredPrescriptions = () => {
-    let filtered = prescriptions;
+    let filtered = displayPrescriptions;
 
     // Apply search filter
     if (prescriptionSearchQuery.trim()) {
       const query = prescriptionSearchQuery.toLowerCase();
-      filtered = filtered.filter(prescription => 
+      filtered = filtered.filter((prescription: any) => 
         prescription.doctor.toLowerCase().includes(query) ||
         prescription.diagnosis.toLowerCase().includes(query) ||
-        prescription.medicines.some(medicine => 
+        prescription.medicines.some((medicine: any) => 
           medicine.name.toLowerCase().includes(query)
         )
       );
@@ -751,17 +1148,17 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
 
     // Apply status filter
     if (prescriptionFilter === 'active') {
-      filtered = filtered.filter(prescription => prescription.status === 'active');
+      filtered = filtered.filter((prescription: any) => prescription.status === 'active');
     } else if (prescriptionFilter === 'recent') {
       // Show prescriptions from last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      filtered = filtered.filter(prescription => 
+      filtered = filtered.filter((prescription: any) => 
         new Date(prescription.date) >= thirtyDaysAgo
       );
     }
 
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return filtered.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
   const markMedicineAsTaken = async (prescriptionId: string, medicineId: string) => {
@@ -769,26 +1166,31 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       // Update in DoctorService
       await DoctorService.updateMedicineProgress(prescriptionId, medicineId);
       
-      // Update local state
-      setPrescriptions(prevPrescriptions => 
-        prevPrescriptions.map(prescription => {
-          if (prescription.id === prescriptionId) {
+      // Find the prescription to update
+      const prescriptionToUpdate = displayPrescriptions.find((p: any) => p.id === prescriptionId);
+      if (prescriptionToUpdate) {
+        const updatedMedicines = prescriptionToUpdate.medicines.map((medicine: any) => {
+          if (medicine.id === medicineId && medicine.completedDoses < medicine.totalDoses) {
             return {
-              ...prescription,
-              medicines: prescription.medicines.map(medicine => {
-                if (medicine.id === medicineId && medicine.completedDoses < medicine.totalDoses) {
-                  return {
-                    ...medicine,
-                    completedDoses: medicine.completedDoses + 1
-                  };
-                }
-                return medicine;
-              })
+              ...medicine,
+              completedDoses: medicine.completedDoses + 1
             };
           }
-          return prescription;
-        })
-      );
+          return medicine;
+        });
+
+        const updatedPrescription = {
+          ...prescriptionToUpdate,
+          medicines: updatedMedicines
+        };
+
+        // Update using sync service (optional - sync may not be initialized)
+        try {
+          await updatePrescription(prescriptionId, updatedPrescription);
+        } catch (syncError) {
+          console.log('Sync not available, medicine progress updated locally only');
+        }
+      }
     } catch (error) {
       console.error('Error updating medicine progress:', error);
       Alert.alert('Error', 'Failed to update medicine progress');
@@ -818,7 +1220,11 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       description: 'Book in-person or video consultation with doctors',
       icon: '👨‍⚕️',
       color: '#3b82f6',
-      action: () => setConsultationModalVisible(true),
+      action: () => {
+        console.log('🏥 Opening consultation modal, refreshing doctors...');
+        initializeDoctorData(); // Refresh doctors when opening modal
+        setConsultationModalVisible(true);
+      },
     },
     {
       id: '2',
@@ -884,6 +1290,14 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       color: '#7c2d12',
       action: () => navigation.navigate('FHIRDataViewer'),
     },
+    {
+      id: '13',
+      title: 'Multi-Device Sync Demo',
+      description: 'See real-time sync across patient → doctor → chemist workflow',
+      icon: '🔄',
+      color: '#3b82f6',
+      action: () => navigation.navigate('MultiDeviceSyncDemo'),
+    },
   ];
 
   // ============================================================================
@@ -908,8 +1322,8 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                 t('common.logout_confirm'),
                 [
                   { text: t('common.cancel'), style: 'cancel' },
-                  { text: t('common.logout'), style: 'destructive', onPress: () => {
-                    logout();
+                  { text: t('common.logout'), style: 'destructive', onPress: async () => {
+                    await logout();
                     navigation.navigate('Login');
                   }}
                 ]
@@ -921,30 +1335,54 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         </View>
       </View>
 
+      {/* Real-time Sync Status */}
+      <View style={styles.syncStatusContainer}>
+        <View style={[styles.syncIndicator, { 
+          backgroundColor: globalSync.getSyncHealth().isHealthy ? '#10b981' : '#dc2626' 
+        }]} />
+        <Text style={styles.syncStatusText}>
+          {globalSync.getSyncHealth().isHealthy ? '🔄 Live Sync Active' : '⚠️ Sync Issues'}
+        </Text>
+        <Text style={styles.syncDataCount}>
+          {globalSync.getSyncHealth().totalRecords} records synced
+        </Text>
+        {notifications.unreadCount > 0 && (
+          <View style={styles.notificationBadge}>
+            <Text style={styles.notificationText}>{notifications.unreadCount}</Text>
+          </View>
+        )}
+        <TouchableOpacity 
+          style={styles.forceSyncButton}
+          onPress={globalSync.forceSync}
+        >
+          <Text style={styles.forceSyncText}>🔄 Force Sync</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{appointments.filter(apt => apt.status === 'confirmed').length}</Text>
+          <Text style={styles.statNumber}>{displayAppointments.filter((apt: any) => apt.status === 'confirmed').length}</Text>
           <Text style={styles.statLabel}>Scheduled Meetings</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{appointments.filter(apt => apt.status === 'scheduled').length}</Text>
+          <Text style={styles.statNumber}>{displayAppointments.filter((apt: any) => apt.status === 'scheduled').length}</Text>
           <Text style={styles.statLabel}>Pending Requests</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{appointments.filter(apt => apt.status === 'completed').length}</Text>
+          <Text style={styles.statNumber}>{displayAppointments.filter((apt: any) => apt.status === 'completed').length}</Text>
           <Text style={styles.statLabel}>Completed</Text>
         </View>
       </View>
 
       {/* Scheduled Meetings Section */}
-      {appointments.filter(apt => apt.status === 'confirmed').length > 0 && (
+      {displayAppointments.filter((apt: any) => apt.status === 'confirmed').length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Your Scheduled Meetings</Text>
-          {appointments
-            .filter(apt => apt.status === 'confirmed')
+          {displayAppointments
+            .filter((apt: any) => apt.status === 'confirmed')
             .slice(0, 3)
-            .map((appointment, index) => (
+            .map((appointment: any, index: number) => (
               <View key={`scheduled-${appointment.id}-${index}`} style={styles.scheduledMeetingCard}>
                 <View style={styles.meetingTimeContainer}>
                   <Text style={styles.meetingTime}>{appointment.time}</Text>
@@ -1039,7 +1477,18 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
 
               {/* Available Doctors Section */}
               <View style={styles.doctorsSection}>
-                <Text style={styles.sectionTitle}>Available Doctors ({doctors.length})</Text>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.sectionTitle}>Available Doctors ({doctors.length})</Text>
+                  <TouchableOpacity 
+                    style={styles.refreshButton}
+                    onPress={() => {
+                      console.log('🔄 Manual refresh triggered');
+                      initializeDoctorData();
+                    }}
+                  >
+                    <Text style={styles.refreshButtonText}>🔄</Text>
+                  </TouchableOpacity>
+                </View>
                 {loadingDoctors ? (
                   <View style={styles.loadingContainer}>
                     <Text style={styles.loadingText}>Loading doctors...</Text>
@@ -1047,15 +1496,19 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                 ) : doctors.length === 0 ? (
                   <View style={styles.noDoctorsContainer}>
                     <Text style={styles.noDoctorsText}>No doctors available at the moment</Text>
+                    <Text style={styles.noDoctorsText}>Check console logs for debugging info</Text>
                     <TouchableOpacity 
                       style={styles.refreshButton}
-                      onPress={loadDoctors}
+                      onPress={() => {
+                        console.log('🔄 Large refresh button pressed');
+                        initializeDoctorData();
+                      }}
                     >
-                      <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
+                      <Text style={styles.refreshButtonText}>🔄 Load Doctors</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  doctors.map((doctor) => (
+                  (doctors as Doctor[]).map((doctor) => (
                     <View key={doctor.id} style={styles.doctorCard}>
                       <View style={styles.doctorHeader}>
                         <View>
@@ -1548,12 +2001,12 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
             <FlatList
-              data={appointments}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => (
+              data={displayAppointments}
+              keyExtractor={(item: any) => item.id}
+              renderItem={({ item }: {item: any}) => (
                 <View style={styles.appointmentCard}>
                   <View style={styles.appointmentHeader}>
-                    <Text style={styles.appointmentDoctor}>{item.doctor}</Text>
+                    <Text style={styles.appointmentDoctor}>{item.doctorName || item.doctor || 'Unknown Doctor'}</Text>
                     <View style={[styles.statusBadge, { 
                       backgroundColor: 
                         item.status === 'completed' ? '#dcfce7' :
@@ -1587,7 +2040,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                         style={[styles.rescheduleButton, { backgroundColor: '#10b981' }]}
                         onPress={() => Alert.alert(
                           'Join Meeting', 
-                          `Ready to join consultation with ${item.doctor}?\n\n📅 ${item.date} at ${item.time}`,
+                          `Ready to join consultation with ${item.doctorName || item.doctor || 'Unknown Doctor'}?\n\n📅 ${item.date} at ${item.time}`,
                           [
                             { text: 'Cancel', style: 'cancel' },
                             { text: 'Join Now', onPress: () => Alert.alert('Meeting', 'Starting consultation...') }
@@ -1605,12 +2058,21 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                     )}
                     
                     {(item.status === 'confirmed' || item.status === 'scheduled') && (
-                      <TouchableOpacity 
-                        style={styles.rescheduleButton}
-                        onPress={() => Alert.alert('Reschedule', `Reschedule appointment with ${item.doctor}`)}
-                      >
-                        <Text style={styles.rescheduleButtonText}>Reschedule</Text>
-                      </TouchableOpacity>
+                      <View style={styles.appointmentButtonRow}>
+                        <TouchableOpacity 
+                          style={[styles.rescheduleButton, { backgroundColor: '#f59e0b', flex: 1, marginRight: 8 }]}
+                          onPress={() => handleRescheduleAppointment(item)}
+                        >
+                          <Text style={[styles.rescheduleButtonText, { color: '#fff' }]}>Reschedule</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                          style={[styles.rescheduleButton, { backgroundColor: '#dc2626', flex: 1, marginLeft: 8 }]}
+                          onPress={() => handleCancelAppointment(item)}
+                        >
+                          <Text style={[styles.rescheduleButtonText, { color: '#fff' }]}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -1772,6 +2234,78 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
                 </Text>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reschedule Appointment Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={rescheduleModalVisible}
+        onRequestClose={() => setRescheduleModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Reschedule Appointment</Text>
+              <TouchableOpacity onPress={() => setRescheduleModalVisible(false)}>
+                <Text style={styles.closeButton}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {selectedAppointmentForAction && (
+              <View style={styles.rescheduleContent}>
+                <Text style={styles.appointmentInfo}>
+                  Rescheduling appointment with {selectedAppointmentForAction.doctorName || selectedAppointmentForAction.doctor}
+                </Text>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Current Date & Time</Text>
+                  <Text style={styles.currentDateTime}>
+                    📅 {selectedAppointmentForAction.date} at {selectedAppointmentForAction.time}
+                  </Text>
+                </View>
+                
+                <View style={styles.formRow}>
+                  <View style={styles.formGroupHalf}>
+                    <Text style={styles.formLabel}>New Date</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="YYYY-MM-DD"
+                      value={newAppointmentDate}
+                      onChangeText={setNewAppointmentDate}
+                    />
+                  </View>
+                  
+                  <View style={styles.formGroupHalf}>
+                    <Text style={styles.formLabel}>New Time</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="HH:MM"
+                      value={newAppointmentTime}
+                      onChangeText={setNewAppointmentTime}
+                    />
+                  </View>
+                </View>
+                
+                <View style={styles.rescheduleActions}>
+                  <TouchableOpacity 
+                    style={[styles.rescheduleButton, { backgroundColor: '#6b7280', flex: 1, marginRight: 8 }]}
+                    onPress={() => setRescheduleModalVisible(false)}
+                  >
+                    <Text style={[styles.rescheduleButtonText, { color: '#fff' }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.rescheduleButton, { backgroundColor: '#10b981', flex: 1, marginLeft: 8 }]}
+                    onPress={confirmReschedule}
+                  >
+                    <Text style={[styles.rescheduleButtonText, { color: '#fff' }]}>Confirm Reschedule</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -2694,6 +3228,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
+  appointmentButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   appointmentNote: {
     fontSize: 12,
     fontWeight: '500',
@@ -2884,6 +3423,85 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  rescheduleContent: {
+    padding: 16,
+  },
+  appointmentInfo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  currentDateTime: {
+    fontSize: 14,
+    color: '#374151',
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  rescheduleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+  },
+  
+  // Sync Status Styles
+  syncStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    margin: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  syncIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  syncStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  syncDataCount: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginRight: 8,
+  },
+  notificationBadge: {
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  notificationText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  forceSyncButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  forceSyncText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

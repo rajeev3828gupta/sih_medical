@@ -7,7 +7,7 @@ import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
 // Import types and screens
 import { RootStackParamList } from './types/navigation';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
@@ -35,6 +35,8 @@ import Teleconsultation from './screens/Teleconsultation';
 import LowBandwidthOptimization from './screens/LowBandwidthOptimization';
 import AdminPanel from './screens/AdminPanel';
 import LanguageSettingsScreen from './screens/LanguageSettingsScreen';
+import MultiDeviceSyncDemo from './screens/MultiDeviceSyncDemo';
+import SyncInitializer from './components/SyncInitializer';
 
 // Global variable to store dashboard modal functions
 let dashboardModalFunctions: {
@@ -78,13 +80,23 @@ const ConsultationSummaryScreen = ({ route, navigation }: any) => {
   );
 };
 
-// Navigation Component with translations
+// Navigation Component with translations and auth-aware routing
 const AppNavigator = () => {
   const { t } = useLanguage();
+  const { isLoggedIn, isLoading } = useAuth();
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+        <Text style={{ fontSize: 18, color: '#6b7280' }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <Stack.Navigator
-      initialRouteName="Welcome"
+      initialRouteName={isLoggedIn ? "Dashboard" : "Welcome"}
       screenOptions={{
         headerShown: false,
       }}
@@ -242,6 +254,12 @@ const AppNavigator = () => {
       />
       
       <Stack.Screen 
+        name="MultiDeviceSyncDemo" 
+        component={MultiDeviceSyncDemo} 
+        options={{ headerShown: true, title: 'Multi-Device Sync Demo' }}
+      />
+      
+      <Stack.Screen 
         name="ConsultationSummary" 
         component={ConsultationSummaryScreen} 
         options={{ headerShown: true, title: t('consultation_summary') }}
@@ -254,12 +272,14 @@ export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <NavigationContainer>
-            <AppNavigator />
-            <StatusBar style="light" />
-          </NavigationContainer>
-        </QueryClientProvider>
+        <SyncInitializer>
+          <QueryClientProvider client={queryClient}>
+            <NavigationContainer>
+              <AppNavigator />
+              <StatusBar style="light" />
+            </NavigationContainer>
+          </QueryClientProvider>
+        </SyncInitializer>
       </AuthProvider>
     </LanguageProvider>
   );

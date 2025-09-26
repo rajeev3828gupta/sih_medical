@@ -38,4 +38,5 @@ export type RootStackParamList = {
   MedicineAvailabilityTracker: undefined;
   CHWDashboard: undefined;
   LanguageSettings: undefined;
+  MultiDeviceSyncDemo: undefined;
 };

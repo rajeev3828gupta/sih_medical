@@ -352,6 +352,14 @@ const translations = {
     'register.enter_license': 'Enter license number',
     'register.specialization': 'Specialization',
     'register.specialization_placeholder': 'e.g., Cardiology, Pediatrics',
+    'register.hospital': 'Hospital/Clinic Name',
+    'register.hospital_placeholder': 'Enter hospital or clinic name',
+    'register.experience': 'Years of Experience',
+    'register.experience_placeholder': 'Enter years of experience',
+    'register.pharmacy_name': 'Pharmacy Name',
+    'register.enter_pharmacy_name': 'Enter pharmacy name',
+    'register.pharmacy_license': 'Pharmacy License Number',
+    'register.pharmacy_license_placeholder': 'Enter pharmacy license number',
     
     // Admin Panel
     'admin.title': 'Admin Panel',
@@ -653,6 +661,14 @@ const translations = {
     'register.enter_license': 'लाइसेंस नंबर दर्ज करें',
     'register.specialization': 'विशेषीकरण',
     'register.specialization_placeholder': 'जैसे, कार्डियोलॉजी, बाल चिकित्सा',
+    'register.hospital': 'अस्पताल/क्लिनिक का नाम',
+    'register.hospital_placeholder': 'अस्पताल या क्लिनिक का नाम दर्ज करें',
+    'register.experience': 'अनुभव के वर्ष',
+    'register.experience_placeholder': 'अनुभव के वर्ष दर्ज करें',
+    'register.pharmacy_name': 'फार्मेसी का नाम',
+    'register.enter_pharmacy_name': 'फार्मेसी का नाम दर्ज करें',
+    'register.pharmacy_license': 'फार्मेसी लाइसेंस नंबर',
+    'register.pharmacy_license_placeholder': 'फार्मेसी लाइसेंस नंबर दर्ज करें',
     
     // Admin Panel
     'admin.title': 'प्रशासक पैनल',
@@ -954,6 +970,14 @@ const translations = {
     'register.enter_license': 'ਲਾਇਸੈਂਸ ਨੰਬਰ ਦਾਖਲ ਕਰੋ',
     'register.specialization': 'ਵਿਸ਼ੇਸ਼ਤਾ',
     'register.specialization_placeholder': 'ਜਿਵੇਂ, ਕਾਰਡੀਓਲੋਜੀ, ਬਾਲ ਚਿਕਿਤਸਾ',
+    'register.hospital': 'ਹਸਪਤਾਲ/ਕਲੀਨਿਕ ਦਾ ਨਾਮ',
+    'register.hospital_placeholder': 'ਹਸਪਤਾਲ ਜਾਂ ਕਲੀਨਿਕ ਦਾ ਨਾਮ ਦਾਖਲ ਕਰੋ',
+    'register.experience': 'ਤਜਰਬੇ ਦੇ ਸਾਲ',
+    'register.experience_placeholder': 'ਤਜਰਬੇ ਦੇ ਸਾਲ ਦਾਖਲ ਕਰੋ',
+    'register.pharmacy_name': 'ਫਾਰਮੇਸੀ ਦਾ ਨਾਮ',
+    'register.enter_pharmacy_name': 'ਫਾਰਮੇਸੀ ਦਾ ਨਾਮ ਦਾਖਲ ਕਰੋ',
+    'register.pharmacy_license': 'ਫਾਰਮੇਸੀ ਲਾਇਸੈਂਸ ਨੰਬਰ',
+    'register.pharmacy_license_placeholder': 'ਫਾਰਮੇਸੀ ਲਾਇਸੈਂਸ ਨੰਬਰ ਦਾਖਲ ਕਰੋ',
     
     // Admin Panel
     'admin.title': 'ਪ੍ਰਸ਼ਾਸਕ ਪੈਨਲ',

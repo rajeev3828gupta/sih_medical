@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useGlobalSync, useRoleBasedData, useRealtimeNotifications } from '../hooks/useGlobalSync';
 
 type ChemistDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -27,7 +28,7 @@ const { width } = Dimensions.get('window');
 const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
-
+  
   // State for modals and data
   const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
@@ -52,6 +53,16 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
     { id: '4', name: 'Ibuprofen 400mg', category: 'Analgesic', stock: 120, price: 30, expiry: '2025-06-30' },
     { id: '5', name: 'Vitamin D3', category: 'Supplement', stock: 90, price: 80, expiry: '2026-03-15' },
   ]);
+
+  // Global sync integration
+  const globalSync = useGlobalSync(user);
+  const roleBasedData = useRoleBasedData(user, globalSync);
+  const notifications = useRealtimeNotifications(user);
+
+  // Get real-time prescription data
+  const syncedPrescriptions = roleBasedData.availablePrescriptions || prescriptions;
+  const syncedOrders = roleBasedData.myOrders || [];
+  const syncedMedications = roleBasedData.medications || inventory;
 
   // Sample drug information
   const drugDatabase = [
@@ -171,8 +182,8 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
                 t('common.logout_confirm'),
                 [
                   { text: t('common.cancel'), style: 'cancel' },
-                  { text: t('common.logout'), style: 'destructive', onPress: () => {
-                    logout();
+                  { text: t('common.logout'), style: 'destructive', onPress: async () => {
+                    await logout();
                     navigation.navigate('Login');
                   }}
                 ]
@@ -182,6 +193,30 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
             <Text style={styles.logoutText}>{t('common.logout')}</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Sync Status */}
+      <View style={styles.syncStatusContainer}>
+        <View 
+          style={[
+            styles.syncIndicator, 
+            { backgroundColor: globalSync.getSyncHealth().isHealthy ? '#10b981' : '#ef4444' }
+          ]} 
+        />
+        <Text style={styles.syncStatusText}>
+          {globalSync.getSyncHealth().isHealthy ? 'Real-time Sync Active' : 'Sync Issues Detected'}
+        </Text>
+        <Text style={styles.syncDataCount}>
+          {syncedPrescriptions.length} prescriptions • {syncedMedications.length} items
+        </Text>
+        {notifications.unreadCount > 0 && (
+          <View style={styles.notificationBadge}>
+            <Text style={styles.notificationText}>{notifications.unreadCount}</Text>
+          </View>
+        )}
+        <TouchableOpacity onPress={globalSync.forceSync}>
+          <Text style={styles.syncDataCount}>↻</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Quick Stats */}
@@ -1035,6 +1070,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#10b981',
     fontWeight: '600',
+  },
+  
+  // Sync Status Styles
+  syncStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    margin: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  syncIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  syncStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  syncDataCount: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginRight: 8,
+  },
+  notificationBadge: {
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  notificationText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

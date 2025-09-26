@@ -17,6 +17,8 @@ import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { DoctorService, ConsultationBooking, Medicine } from '../services/DoctorService';
+import { useSyncedConsultations } from '../hooks/useSyncedData';
+import { useGlobalSync, useRoleBasedData, useRealtimeNotifications } from '../hooks/useGlobalSync';
 
 type DoctorDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -75,6 +77,32 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       endDate: string;
     }>
   });
+
+  // Global sync integration for multi-device real-time updates
+  const globalSync = useGlobalSync(user);
+  const roleBasedData = useRoleBasedData(user, {
+    consultations: globalSync.consultations,
+    appointments: globalSync.appointments,
+    prescriptions: globalSync.prescriptions,
+    doctors: globalSync.doctors
+  });
+  const notifications = useRealtimeNotifications(user);
+
+  // Use sync system for real-time consultation updates
+  const {
+    data: syncedConsultations,
+    addData: addConsultation,
+    updateData: updateConsultation,
+    deleteData: deleteConsultation,
+    syncStatus: consultationSyncStatus,
+    isLoading: consultationsLoading
+  } = useSyncedConsultations();
+
+  // Watch for changes in synced consultations and reload when they change
+  useEffect(() => {
+    console.log('Synced consultations changed, reloading...');
+    loadRecentConsultations();
+  }, [syncedConsultations]);
 
   // Load recent consultations on component mount and set up auto-refresh
   useEffect(() => {
@@ -135,42 +163,31 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       // Debug AsyncStorage first
       await debugAsyncStorage();
       
-      // Try multiple doctor ID formats to match with consultations
-      const possibleDoctorIds = [
-        'doc_taru_4433', // Try the specific doctor ID first
-        user?.id,
-        `doc_${user?.name?.toLowerCase()?.replace(/\s+/g, '_')}_${user?.id?.split('_').pop()}`,
-        `doctor_${user?.id}`,
-        user?.name?.toLowerCase()?.replace(/\s+/g, '_'),
-      ].filter(Boolean);
+      // Use synced consultations instead of AsyncStorage
+      console.log('Total synced consultations:', syncedConsultations.length);
+      console.log('Synced consultation data:', syncedConsultations);
       
-      console.log('All possible doctor IDs to try:', possibleDoctorIds);
+      // Get the current doctor's ID - use user.id as the primary identifier
+      const currentDoctorId = user?.id;
+      console.log('Current doctor ID:', currentDoctorId);
       
-      console.log('Trying doctor IDs:', possibleDoctorIds);
+      // Filter consultations for this doctor
+      const consultations = (syncedConsultations || []).filter((consultation: any) => {
+        // Match by exact doctor ID
+        const matches = consultation.doctorId === currentDoctorId;
+        console.log(`Checking consultation ${consultation.id}: doctorId=${consultation.doctorId}, matches=${matches}`);
+        return matches;
+      }) as ConsultationBooking[];
       
-      let consultations: any[] = [];
-      
-      // Try each possible doctor ID
-      for (const doctorId of possibleDoctorIds) {
-        if (doctorId) {
-          console.log(`Trying doctor ID: ${doctorId}`);
-          const doctorConsultations = await DoctorService.getDoctorConsultations(doctorId);
-          console.log(`Result for ${doctorId}: ${doctorConsultations.length} consultations`);
-          if (doctorConsultations.length > 0) {
-            consultations = doctorConsultations;
-            console.log(`✓ SUCCESS: Found ${consultations.length} consultations for doctor ID: ${doctorId}`);
-            console.log('Consultation details:', consultations.map(c => ({
-              id: c.id,
-              patientId: c.patientId,
-              status: c.status,
-              date: c.scheduledDate
-            })));
-            break;
-          } else {
-            console.log(`✗ No consultations found for doctor ID: ${doctorId}`);
-          }
-        }
-      }
+      console.log(`✓ Found ${consultations.length} consultations for doctor ID: ${currentDoctorId}`);
+      console.log('Consultation details:', consultations.map(c => ({
+        id: c.id,
+        doctorId: c.doctorId,
+        patientId: c.patientId,
+        status: c.status,
+        date: c.scheduledDate,
+        symptoms: c.symptoms
+      })));
       
       console.log('Total fetched consultations:', consultations.length);
       console.log('Raw consultation data:', JSON.stringify(consultations, null, 2));
@@ -693,8 +710,8 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
                 t('common.logout_confirm'),
                 [
                   { text: t('common.cancel'), style: 'cancel' },
-                  { text: t('common.logout'), style: 'destructive', onPress: () => {
-                    logout();
+                  { text: t('common.logout'), style: 'destructive', onPress: async () => {
+                    await logout();
                     navigation.navigate('Login');
                   }}
                 ]
@@ -706,7 +723,23 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
         </View>
       </View>
 
-
+      {/* Real-time Sync Status */}
+      <View style={styles.syncStatusContainer}>
+        <View style={[styles.syncIndicator, { 
+          backgroundColor: globalSync.getSyncHealth().isHealthy ? '#10b981' : '#dc2626' 
+        }]} />
+        <Text style={styles.syncStatusText}>
+          {globalSync.getSyncHealth().isHealthy ? '🔄 Live Sync Active' : '⚠️ Sync Issues'}
+        </Text>
+        <Text style={styles.syncDataCount}>
+          {roleBasedData.myConsultations?.length || 0} consultations • {roleBasedData.myAppointments?.length || 0} appointments
+        </Text>
+        {notifications.unreadCount > 0 && (
+          <View style={styles.notificationBadge}>
+            <Text style={styles.notificationText}>{notifications.unreadCount}</Text>
+          </View>
+        )}
+      </View>
 
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
@@ -2086,6 +2119,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+  
+  // Sync Status Styles
+  syncStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    margin: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  syncIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  syncStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  syncDataCount: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginRight: 8,
+  },
+  notificationBadge: {
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  notificationText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

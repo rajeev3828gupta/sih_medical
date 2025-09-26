@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationService from './NotificationService';
+import { syncService } from './RealtimeSyncService';
 
 export interface PendingRegistration {
   id: string;
@@ -71,10 +72,17 @@ export class RegistrationApprovalService {
         submittedAt: new Date().toISOString(),
       };
 
-      const existingRequests = await this.getPendingRegistrations();
-      const updatedRequests = [...existingRequests, pendingRegistration];
-      
-      await AsyncStorage.setItem(this.PENDING_REGISTRATIONS_KEY, JSON.stringify(updatedRequests));
+      // Add to sync service for real-time multi-device synchronization
+      try {
+        await syncService.addData('registrationRequests', pendingRegistration);
+      } catch (syncError) {
+        console.log('Sync service not available, saving locally only');
+        
+        // Fallback to local storage
+        const existingRequests = await this.getPendingRegistrations();
+        const updatedRequests = [...existingRequests, pendingRegistration];
+        await AsyncStorage.setItem(this.PENDING_REGISTRATIONS_KEY, JSON.stringify(updatedRequests));
+      }
       
       // Add notification for admin
       await this.addAdminNotification({
@@ -95,6 +103,17 @@ export class RegistrationApprovalService {
   // Get all pending registrations (for admin)
   static async getPendingRegistrations(): Promise<PendingRegistration[]> {
     try {
+      // Try to get from sync service first (for multi-device sync)
+      try {
+        const syncedData = await syncService.getData('registrationRequests');
+        if (syncedData && syncedData.length > 0) {
+          return syncedData;
+        }
+      } catch (syncError) {
+        console.log('Sync service not available, falling back to local storage');
+      }
+
+      // Fallback to AsyncStorage for backward compatibility
       const data = await AsyncStorage.getItem(this.PENDING_REGISTRATIONS_KEY);
       return data ? JSON.parse(data) : [];
     } catch (error) {
@@ -124,8 +143,15 @@ export class RegistrationApprovalService {
       request.reviewedBy = adminId;
       request.generatedCredentials = credentials;
 
-      // Save updated requests
-      await AsyncStorage.setItem(this.PENDING_REGISTRATIONS_KEY, JSON.stringify(pendingRequests));
+      // Update in sync service for real-time multi-device synchronization
+      try {
+        await syncService.updateData('registrationRequests', registrationId, request);
+      } catch (syncError) {
+        console.log('Sync service not available, saving locally only');
+        
+        // Fallback to local storage
+        await AsyncStorage.setItem(this.PENDING_REGISTRATIONS_KEY, JSON.stringify(pendingRequests));
+      }
 
       // Add user to approved users list
       await this.addApprovedUser(request);

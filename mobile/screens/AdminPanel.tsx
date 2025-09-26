@@ -22,6 +22,7 @@ import { RegistrationApprovalService, PendingRegistration } from '../services/Re
 import NotificationService from '../services/NotificationService';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSelector from '../components/LanguageSelector';
+import { useSyncedRegistrationRequests, useSyncedAdminUsers, useSyncedSystemStats } from '../hooks/useSyncedData';
 
 type AdminPanelProps = {
   navigation: StackNavigationProp<RootStackParamList, 'AdminPanel'>;
@@ -51,6 +52,7 @@ interface UserManagement {
 }
 
 interface SystemStats {
+  id?: string;
   totalUsers: number;
   activeUsers: number;
   pendingRequests: number;
@@ -63,16 +65,53 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const [selectedTab, setSelectedTab] = useState<'dashboard' | 'requests' | 'users' | 'system'>('dashboard');
-  const [registrationRequests, setRegistrationRequests] = useState<PendingRegistration[]>([]);
-  const [users, setUsers] = useState<UserManagement[]>([]);
-  const [systemStats, setSystemStats] = useState<SystemStats>({
+  
+  // Use synced data hooks for real-time multi-device synchronization
+  const { 
+    data: registrationRequests, 
+    updateData: updateRegistrationRequests,
+    refreshData: refreshRegistrationRequests,
+    isLoading: requestsLoading,
+    syncStatus: requestsSyncStatus
+  } = useSyncedRegistrationRequests() as {
+    data: PendingRegistration[],
+    updateData: (id: string, data: PendingRegistration) => Promise<void>,
+    refreshData: () => Promise<void>,
+    isLoading: boolean,
+    syncStatus: any
+  };
+  
+  const { 
+    data: users, 
+    updateData: updateUsers,
+    isLoading: usersLoading 
+  } = useSyncedAdminUsers() as {
+    data: UserManagement[],
+    updateData: (id: string, data: UserManagement) => Promise<void>,
+    isLoading: boolean
+  };
+  
+  const { 
+    data: systemStatsArray, 
+    addData: addSystemStats,
+    updateData: updateSystemStats,
+    isLoading: statsLoading 
+  } = useSyncedSystemStats() as {
+    data: SystemStats[],
+    addData: (data: SystemStats) => Promise<string>,
+    updateData: (id: string, data: SystemStats) => Promise<void>,
+    isLoading: boolean
+  };
+  
+  // Extract first item from system stats array or use default
+  const systemStats = systemStatsArray.length > 0 ? systemStatsArray[0] : {
     totalUsers: 0,
     activeUsers: 0,
     pendingRequests: 0,
     totalConsultations: 0,
     todayConsultations: 0,
-    systemHealth: 'good'
-  });
+    systemHealth: 'good' as const
+  };
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PendingRegistration | null>(null);
   const [requestModalVisible, setRequestModalVisible] = useState(false);
@@ -86,9 +125,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
 
   const loadData = async () => {
     try {
-      // Load actual registration requests from service
+      // Load initial data and sync across devices
       const pendingRequests = await RegistrationApprovalService.getPendingRegistrations();
-      setRegistrationRequests(pendingRequests);
+      
+      console.log('📊 Admin Panel - Loading data:');
+      console.log('  Synced requests count:', registrationRequests.length);
+      console.log('  Local requests count:', pendingRequests.length);
+      
+      // Sync any new requests that aren't already in synced data
+      for (const request of pendingRequests) {
+        const existsInSynced = registrationRequests.find(r => r.id === request.id);
+        if (!existsInSynced) {
+          try {
+            console.log('🔄 Adding new request to sync:', request.id);
+            await updateRegistrationRequests(request.id, request);
+          } catch (error) {
+            console.log('Error syncing request:', request.id, error);
+          }
+        }
+      }
 
       const mockUsers: UserManagement[] = [
         {
@@ -120,14 +175,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
       const mockStats: SystemStats = {
         totalUsers: 1247,
         activeUsers: 89,
-        pendingRequests: pendingRequests.filter(req => req.status === 'pending').length,
+        pendingRequests: registrationRequests.filter((req: PendingRegistration) => req.status === 'pending').length,
         totalConsultations: 3456,
         todayConsultations: 23,
         systemHealth: 'good'
       };
 
-      setUsers(mockUsers);
-      setSystemStats(mockStats);
+      // Add users to synced data if not already populated
+      if (users.length === 0) {
+        for (const user of mockUsers) {
+          try {
+            await updateUsers(user.id, user);
+          } catch (error) {
+            console.log('User already exists or error adding:', user.id);
+          }
+        }
+      }
+      
+      // Create or update stats to reflect current request count
+      try {
+        if (systemStatsArray.length === 0) {
+          // Create new stats document
+          const statsWithId = {
+            id: 'main-stats',
+            ...mockStats
+          };
+          await addSystemStats(statsWithId);
+          console.log('✅ Created new system stats document');
+        } else {
+          // Update existing stats document
+          const existingStats = systemStatsArray[0];
+          await updateSystemStats(existingStats.id || 'main-stats', mockStats);
+          console.log('✅ Updated existing system stats document');
+        }
+      } catch (error) {
+        console.log('Error managing system stats:', error);
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to load data');
     }
@@ -135,7 +218,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    console.log('🔄 Admin Panel - Manual refresh triggered');
+    
+    try {
+      // Refresh synced data
+      if (typeof refreshRegistrationRequests === 'function') {
+        await refreshRegistrationRequests();
+      }
+      
+      // Also load from service
+      await loadData();
+      
+      console.log('✅ Admin Panel - Refresh completed');
+      console.log('  Final synced requests:', registrationRequests.length);
+    } catch (error) {
+      console.error('❌ Admin Panel - Refresh failed:', error);
+    }
+    
     setRefreshing(false);
   };
 
@@ -168,14 +267,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
     setRejectionReason('');
   };
 
-  const toggleUserStatus = (userId: string) => {
-    setUsers(prev =>
-      prev.map(user =>
-        user.id === userId
-          ? { ...user, status: user.status === 'active' ? 'suspended' : 'active' }
-          : user
-      )
-    );
+  const toggleUserStatus = async (userId: string) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        const updatedUser = {
+          ...user,
+          status: user.status === 'active' ? 'suspended' as const : 'active' as const
+        };
+        await updateUsers(userId, updatedUser);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update user status');
+    }
   };
 
   const renderDashboard = () => (
@@ -505,8 +609,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ navigation }) => {
           onPress={() => {
             Alert.alert(t('admin.logout'), t('admin.logout_confirm'), [
               { text: t('cancel'), style: 'cancel' },
-              { text: t('admin.logout'), onPress: () => {
-                logout();
+              { text: t('admin.logout'), onPress: async () => {
+                await logout();
                 navigation.navigate('Welcome');
               }}
             ]);
