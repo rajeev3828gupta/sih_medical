@@ -12,14 +12,12 @@
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.126",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.9",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.12.0",
     "idb": "^8.0.3",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.8.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
     "react-scripts": "5.0.1",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4",
@@ -51,6 +49,10 @@
     ]
   },
   "devDependencies": {
+    "@types/bonjour": "^3.5.13",
+    "@types/history": "^4.7.11",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
     "postcss": "^8.5.6"
   }
 }

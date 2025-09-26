@@ -789,7 +789,7 @@ class FHIRLiteService {
             type: vitalType,
             value: typeof value === 'object' ? undefined : value,
             stringValue: typeof value === 'string' ? value : undefined,
-            components: typeof value === 'object' ? this.parseBloodPressure(value as string) : undefined,
+            components: typeof value === 'object' ? this.parseBloodPressure(value as unknown as string) : undefined,
             patientId: patient.id,
             encounterId: encounter.id,
             unit: this.getVitalSignUnit(vitalType),

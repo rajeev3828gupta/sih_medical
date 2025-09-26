@@ -33,7 +33,10 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@types/bonjour": "^3.5.13",
+    "@types/history": "^4.7.11",
     "@types/react": "~19.1.0",
+    "@types/react-native": "^0.72.8",
     "typescript": "~5.9.2"
   },
   "private": true
