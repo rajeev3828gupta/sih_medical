@@ -370,7 +370,7 @@ const MedicineAvailabilityTracker: React.FC = () => {
       return;
     }
 
-    const quantity = parseInt(reservationQuantity);
+    const quantity = parseInt(reservationQuantity) || 0;
     if (quantity <= 0 || quantity > (selectedMedicine.stock - selectedMedicine.reservedStock)) {
       Alert.alert('Error', 'Invalid quantity');
       return;
@@ -578,8 +578,8 @@ const MedicineAvailabilityTracker: React.FC = () => {
           <View style={styles.predictionRow}>
             <Text style={styles.demandTrend}>{trendIcon} {item.demandTrend}</Text>
             <Text style={styles.stockoutWarning}>
-              {item.daysUntilStockout <= 2 && item.daysUntilStockout > 0 && '⚠️ Low stock'}
-              {item.daysUntilStockout === 0 && '🚨 Out of stock'}
+              {item.daysUntilStockout <= 2 && item.daysUntilStockout > 0 ? '⚠️ Low stock' :
+               item.daysUntilStockout === 0 ? '🚨 Out of stock' : null}
             </Text>
           </View>
         </View>
@@ -1110,7 +1110,7 @@ const MedicineAvailabilityTracker: React.FC = () => {
                       <View style={styles.metric}>
                         <Text style={styles.metricLabel}>Success Rate</Text>
                         <Text style={styles.metricValue}>
-                          {Math.round((pharmacy.successfulReservations / pharmacy.totalReservations) * 100)}%
+                          {pharmacy.totalReservations > 0 ? Math.round((pharmacy.successfulReservations / pharmacy.totalReservations) * 100) : 0}%
                         </Text>
                       </View>
                     </View>

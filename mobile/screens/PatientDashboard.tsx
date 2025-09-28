@@ -66,6 +66,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   const [newAppointmentDate, setNewAppointmentDate] = useState('');
   const [newAppointmentTime, setNewAppointmentTime] = useState('');
   const [healthRecordsModalVisible, setHealthRecordsModalVisible] = useState(false);
+  const [healthRecordsExpanded, setHealthRecordsExpanded] = useState(false);
 
   // ============================================================================
   // DOCTOR AND CONSULTATION STATES - Using real-time sync
@@ -1264,7 +1265,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       description: t('kiosk.welcome'),
       icon: '🖥️',
       color: '#059669',
-      action: () => Alert.alert(t('telemedicine.kiosk_mode'), t('common.feature_coming_soon')),
+      action: () => navigation.navigate('TelemedicineSystem'),
     },
     {
       id: '9',
@@ -1291,23 +1292,23 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   return (
     <ScrollView style={styles.container}>
       {/* ======================================================================
-          HEADER SECTION
+          HEADER SECTION - Simplified
           ====================================================================== */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>{t('patient.welcome')} {user?.name || t('patient.title')}!</Text>
-            <Text style={styles.subtitle}>{t('patient.subtitle')}</Text>
+          <Text style={styles.greeting}>Hey {String(user?.name || 'there')}!</Text>
+            <Text style={styles.subtitle}>How can we help you today?</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.logoutButton}
             onPress={() => {
               Alert.alert(
-                t('common.logout'),
-                t('common.logout_confirm'),
+                'Sign Out',
+                'Are you sure you want to sign out?',
                 [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  { text: t('common.logout'), style: 'destructive', onPress: async () => {
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Sign Out', style: 'destructive', onPress: async () => {
                     await logout();
                     navigation.navigate('Login');
                   }}
@@ -1315,109 +1316,132 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
               );
             }}
           >
-            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+            <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Real-time Sync Status */}
-      <View style={styles.syncStatusContainer}>
-        <View style={[styles.syncIndicator, { 
-          backgroundColor: globalSync.getSyncHealth().isHealthy ? '#10b981' : '#dc2626' 
-        }]} />
-        <Text style={styles.syncStatusText}>
-          {globalSync.getSyncHealth().isHealthy ? '🔄 Live Sync Active' : '⚠️ Sync Issues'}
-        </Text>
-        <Text style={styles.syncDataCount}>
-          {globalSync.getSyncHealth().totalRecords} records synced
-        </Text>
-        {notifications.unreadCount > 0 && (
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationText}>{notifications.unreadCount}</Text>
-          </View>
-        )}
-        <TouchableOpacity 
-          style={styles.forceSyncButton}
-          onPress={globalSync.forceSync}
-        >
-          <Text style={styles.forceSyncText}>🔄 Force Sync</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Quick Stats */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{displayAppointments.filter((apt: any) => apt.status === 'confirmed').length}</Text>
-          <Text style={styles.statLabel}>Scheduled Meetings</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{displayAppointments.filter((apt: any) => apt.status === 'scheduled').length}</Text>
-          <Text style={styles.statLabel}>Pending Requests</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{displayAppointments.filter((apt: any) => apt.status === 'completed').length}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
+
+      {/* Services Grid */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Services</Text>
+        <View style={styles.quickActionsGrid}>
+          {patientServices.map((service) => (
+            <TouchableOpacity
+              key={service.id}
+              style={[styles.quickActionCard, { backgroundColor: '#fff' }]}
+              onPress={service.action}
+            >
+              <Text style={styles.quickActionIcon}>{service.icon}</Text>
+              <Text style={styles.quickActionTitle}>{service.title}</Text>
+              <Text style={styles.quickActionDesc}>{service.description}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      {/* Scheduled Meetings Section */}
+      {/* Upcoming Appointments - If any */}
       {displayAppointments.filter((apt: any) => apt.status === 'confirmed').length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📅 Your Scheduled Meetings</Text>
+          <Text style={styles.sectionTitle}>Coming Up</Text>
           {displayAppointments
             .filter((apt: any) => apt.status === 'confirmed')
-            .slice(0, 3)
+            .slice(0, 2)
             .map((appointment: any, index: number) => (
-              <View key={`scheduled-${appointment.id}-${index}`} style={styles.scheduledMeetingCard}>
-                <View style={styles.meetingTimeContainer}>
-                  <Text style={styles.meetingTime}>{appointment.time}</Text>
-                  <Text style={styles.meetingDate}>{appointment.date}</Text>
+              <View key={`upcoming-${appointment.id}-${index}`} style={styles.upcomingCard}>
+                <View style={styles.upcomingTime}>
+                  <Text style={styles.upcomingTimeText}>{appointment.time}</Text>
+                  <Text style={styles.upcomingDateText}>{appointment.date}</Text>
                 </View>
-                <View style={styles.meetingDetails}>
-                  <Text style={styles.meetingDoctor}>{appointment.doctor}</Text>
-                  <Text style={styles.meetingType}>{appointment.type}</Text>
-                  <Text style={[styles.meetingStatus, { color: '#059669' }]}>
-                    ✅ CONFIRMED - Ready to Join
-                  </Text>
-                  {(appointment as any).symptoms && (
-                    <Text style={styles.meetingSymptoms}>
-                      💬 {(appointment as any).symptoms}
-                    </Text>
-                  )}
+                <View style={styles.upcomingDetails}>
+                  <Text style={styles.upcomingDoctor}>Dr. {appointment.doctor}</Text>
+                  <Text style={styles.upcomingType}>{appointment.type}</Text>
                 </View>
-                <TouchableOpacity 
-                  style={styles.joinMeetingButton}
+                <TouchableOpacity
+                  style={styles.upcomingJoinButton}
                   onPress={() => Alert.alert(
-                    'Join Meeting', 
-                    `Ready to join ${appointment.type.toLowerCase()} with ${appointment.doctor}?\n\n📅 ${appointment.date} at ${appointment.time}`,
+                    'Join Consultation',
+                    `Ready to meet with Dr. ${appointment.doctor}?`,
                     [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Join Now', onPress: () => Alert.alert('Meeting', 'Starting consultation...') }
+                      { text: 'Not yet', style: 'cancel' },
+                      { text: 'Join Now', onPress: () => Alert.alert('Starting...', 'Connecting to consultation...') }
                     ]
                   )}
                 >
-                  <Text style={styles.joinMeetingButtonText}>Join</Text>
+                  <Text style={styles.upcomingJoinText}>Join</Text>
                 </TouchableOpacity>
               </View>
             ))}
         </View>
       )}
 
-      {/* Patient Services */}
+      {/* Health Records Section - Expandable */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('patient.services_title')}</Text>
-        <View style={styles.servicesGrid}>
-          {patientServices.map((service) => (
+        <TouchableOpacity
+          style={styles.expandableHeader}
+          onPress={() => setHealthRecordsExpanded(!healthRecordsExpanded)}
+        >
+          <Text style={styles.sectionTitle}>Health Records</Text>
+          <Text style={styles.expandIcon}>{healthRecordsExpanded ? '▼' : '▶'}</Text>
+        </TouchableOpacity>
+
+        {healthRecordsExpanded && (
+          <View style={styles.expandedContent}>
+            {/* Recent Health Records - Simplified */}
+            <Text style={styles.subSectionTitle}>Recent Records</Text>
+            <View style={styles.healthRecordsList}>
+              {/* Medical History Items */}
+              {medicalHistory.slice(0, 2).map((record) => (
+                <View key={`history-${record.id}`} style={styles.healthRecordItem}>
+                  <Text style={styles.recordDate}>{record.date} - Medical History</Text>
+                  <Text style={styles.recordDiagnosis}>{record.diagnosis}</Text>
+                  <Text style={styles.recordDoctor}>Dr. {record.doctor}</Text>
+                </View>
+              ))}
+
+              {/* Prescription Items */}
+              {displayPrescriptions.slice(0, 2).map((prescription) => (
+                <View key={`prescription-${prescription.id}`} style={styles.healthRecordItem}>
+                  <Text style={styles.recordDate}>{prescription.date} - Prescription</Text>
+                  <Text style={styles.recordDiagnosis}>{prescription.diagnosis}</Text>
+                  <Text style={styles.recordDoctor}>Dr. {prescription.doctor}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* View All Button */}
             <TouchableOpacity
-              key={service.id}
-              style={[styles.serviceCard, { borderLeftColor: service.color }]}
-              onPress={service.action}
+              style={styles.viewAllButton}
+              onPress={() => setHealthRecordsModalVisible(true)}
             >
-              <Text style={styles.serviceIcon}>{service.icon}</Text>
-              <Text style={styles.serviceTitle}>{service.title}</Text>
-              <Text style={styles.serviceDescription}>{service.description}</Text>
+              <Text style={styles.viewAllButtonText}>View All Health Records</Text>
             </TouchableOpacity>
-          ))}
+          </View>
+        )}
+      </View>
+
+      {/* Recent Activity - Simplified */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <View style={styles.activityList}>
+          <View style={styles.activityItem}>
+            <Text style={styles.activityIcon}>📋</Text>
+            <View style={styles.activityContent}>
+              <Text style={styles.activityTitle}>Prescription Updated</Text>
+              <Text style={styles.activityDesc}>Dr. Sharma reviewed your meds</Text>
+              <Text style={styles.activityTime}>2 hours ago</Text>
+            </View>
+          </View>
+
+          <View style={styles.activityItem}>
+            <Text style={styles.activityIcon}>💬</Text>
+            <View style={styles.activityContent}>
+              <Text style={styles.activityTitle}>Message from Dr. Patel</Text>
+              <Text style={styles.activityDesc}>Follow-up on your checkup</Text>
+              <Text style={styles.activityTime}>Yesterday</Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -3201,6 +3225,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  appointmentRescheduleButton: {
+    backgroundColor: '#f59e0b',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  appointmentCancelButton: {
+    backgroundColor: '#dc2626',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 8,
+  },
+  rescheduleCancelButton: {
+    backgroundColor: '#6b7280',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  rescheduleConfirmButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 8,
+  },
   appointmentSymptoms: {
     fontSize: 12,
     color: '#6b7280',
@@ -3487,6 +3543,275 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  // --------------------------------------------------------------------------
+  // EXPANDABLE SECTION STYLES
+  // --------------------------------------------------------------------------
+  expandableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  expandIcon: {
+    fontSize: 18,
+    color: '#3b82f6',
+    fontWeight: 'bold',
+  },
+  expandedContent: {
+    marginTop: 12,
+  },
+
+  // --------------------------------------------------------------------------
+  // HEALTH STATS STYLES
+  // --------------------------------------------------------------------------
+  healthStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  healthStatCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flex: 1,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  healthStatNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  healthStatLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+
+  // --------------------------------------------------------------------------
+  // HEALTH RECORDS STYLES
+  // --------------------------------------------------------------------------
+  subSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  healthRecordsList: {
+    gap: 12,
+  },
+  healthRecordItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  recordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recordDate: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  recordType: {
+    fontSize: 12,
+    color: '#3b82f6',
+    fontWeight: '600',
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  recordDiagnosis: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  recordDoctor: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  recordMedicines: {
+    fontSize: 14,
+    color: '#059669',
+    fontStyle: 'italic',
+  },
+  viewAllButton: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  viewAllButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // --------------------------------------------------------------------------
+  // QUICK ACTIONS STYLES
+  // --------------------------------------------------------------------------
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  quickActionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: (width - 60) / 2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 12,
+  },
+  quickActionIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  quickActionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  quickActionDesc: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+
+  // --------------------------------------------------------------------------
+  // UPCOMING APPOINTMENTS STYLES
+  // --------------------------------------------------------------------------
+  upcomingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  upcomingTime: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 16,
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  upcomingTimeText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#166534',
+  },
+  upcomingDateText: {
+    fontSize: 12,
+    color: '#166534',
+    marginTop: 2,
+  },
+  upcomingDetails: {
+    flex: 1,
+  },
+  upcomingDoctor: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  upcomingType: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  upcomingJoinButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  upcomingJoinText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // --------------------------------------------------------------------------
+  // ACTIVITY STYLES
+  // --------------------------------------------------------------------------
+  activityList: {
+    gap: 12,
+  },
+  activityItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  activityIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  activityDesc: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  activityTime: {
+    fontSize: 12,
+    color: '#9ca3af',
   },
 });
 

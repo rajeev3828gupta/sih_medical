@@ -108,6 +108,72 @@ interface ChwSession {
   notes: string;
 }
 
+interface KioskCenter {
+  id: string;
+  name: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  distance: number; // in km
+  address: string;
+  phone: string;
+  operatingHours: string;
+  services: string[];
+  isActive: boolean;
+  solarPowered: boolean;
+  internetConnectivity: 'satellite' | '4g' | 'broadband';
+  ashaWorkers: ASHAWorker[];
+  chwWorkers: CHW[];
+  medicineShops: MedicineShop[];
+}
+
+interface ASHAWorker {
+  id: string;
+  name: string;
+  phone: string;
+  languages: string[];
+  experience: string;
+  assignedArea: string;
+  availability: 'available' | 'busy' | 'offline';
+  rating: number;
+  specializations: string[];
+  kioskId: string;
+}
+
+interface CHW {
+  id: string;
+  name: string;
+  phone: string;
+  qualification: string;
+  experience: string;
+  languages: string[];
+  availability: 'available' | 'busy' | 'offline';
+  rating: number;
+  kioskId: string;
+}
+
+interface MedicineShop {
+  id: string;
+  name: string;
+  location: string;
+  phone: string;
+  operatingHours: string;
+  distance: number;
+  services: string[];
+  kioskId: string;
+  medicineStock: MedicineStock[];
+}
+
+interface MedicineStock {
+  medicineId: string;
+  name: string;
+  genericName: string;
+  available: boolean;
+  quantity: number;
+  price: number;
+  requiresPrescription: boolean;
+}
+
 const TelemedicineSystem: React.FC = () => {
   const { t } = useLanguage();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -162,6 +228,14 @@ const TelemedicineSystem: React.FC = () => {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [chwSessions, setChwSessions] = useState<ChwSession[]>([]);
   const [currentChwSession, setCurrentChwSession] = useState<ChwSession | null>(null);
+
+  // Kiosk Mode states
+  const [kioskCenters, setKioskCenters] = useState<KioskCenter[]>([]);
+  const [selectedKioskCenter, setSelectedKioskCenter] = useState<KioskCenter | null>(null);
+  const [selectedASHAWorker, setSelectedASHAWorker] = useState<ASHAWorker | null>(null);
+  const [selectedCHW, setSelectedCHW] = useState<CHW | null>(null);
+  const [selectedMedicineShop, setSelectedMedicineShop] = useState<MedicineShop | null>(null);
+  const [userLocation, setUserLocation] = useState({ latitude: 30.3753, longitude: 76.7821 }); // Nabha, Punjab coordinates
   
   // Refs for media capture
   const cameraRef = useRef<typeof Camera>(null);
@@ -516,12 +590,272 @@ const TelemedicineSystem: React.FC = () => {
       }
     ];
 
+    // Mock Kiosk Centers Data
+    const kioskCentersData: KioskCenter[] = [
+      {
+        id: 'kiosk-001',
+        name: 'Nabha Health Kiosk',
+        location: 'Nabha, Punjab',
+        latitude: 30.3753,
+        longitude: 76.7821,
+        distance: 0, // User's current location
+        address: 'Near Civil Hospital, Nabha',
+        phone: '+91-9876543210',
+        operatingHours: '8:00 AM - 8:00 PM',
+        services: ['Telemedicine', 'Medicine Dispensing', 'Health Checkups', 'Emergency Services'],
+        isActive: true,
+        solarPowered: true,
+        internetConnectivity: 'satellite',
+        ashaWorkers: [
+          {
+            id: 'asha-001',
+            name: 'Priya Sharma',
+            phone: '+91-9876543211',
+            languages: ['Hindi', 'Punjabi', 'English'],
+            experience: '5 years',
+            assignedArea: 'Nabha Rural',
+            availability: 'available',
+            rating: 4.8,
+            specializations: ['Maternal Health', 'Child Care', 'Immunization'],
+            kioskId: 'kiosk-001'
+          },
+          {
+            id: 'asha-002',
+            name: 'Sunita Kaur',
+            phone: '+91-9876543212',
+            languages: ['Punjabi', 'Hindi'],
+            experience: '7 years',
+            assignedArea: 'Nabha Urban',
+            availability: 'available',
+            rating: 4.9,
+            specializations: ['Elderly Care', 'Hypertension Monitoring', 'Diabetes Management'],
+            kioskId: 'kiosk-001'
+          }
+        ],
+        chwWorkers: [
+          {
+            id: 'chw-001',
+            name: 'Gurpreet Singh',
+            phone: '+91-9876543213',
+            qualification: 'B.Sc Nursing',
+            experience: '8 years',
+            languages: ['Punjabi', 'Hindi', 'English'],
+            availability: 'available',
+            rating: 4.7,
+            kioskId: 'kiosk-001'
+          },
+          {
+            id: 'chw-002',
+            name: 'Manpreet Kaur',
+            phone: '+91-9876543214',
+            qualification: 'GNM',
+            experience: '6 years',
+            languages: ['Punjabi', 'Hindi'],
+            availability: 'busy',
+            rating: 4.6,
+            kioskId: 'kiosk-001'
+          }
+        ],
+        medicineShops: [
+          {
+            id: 'medshop-001',
+            name: 'Nabha Medical Store',
+            location: 'Near Kiosk Center',
+            phone: '+91-9876543215',
+            operatingHours: '9:00 AM - 9:00 PM',
+            distance: 0.1,
+            services: ['Prescription Medicines', 'OTC Drugs', 'Medical Supplies'],
+            kioskId: 'kiosk-001',
+            medicineStock: [
+              {
+                medicineId: 'med-001',
+                name: 'Paracetamol',
+                genericName: 'Acetaminophen',
+                available: true,
+                quantity: 50,
+                price: 25,
+                requiresPrescription: false
+              },
+              {
+                medicineId: 'med-002',
+                name: 'Amoxicillin',
+                genericName: 'Amoxicillin',
+                available: true,
+                quantity: 30,
+                price: 85,
+                requiresPrescription: true
+              },
+              {
+                medicineId: 'med-003',
+                name: 'Metformin',
+                genericName: 'Metformin',
+                available: true,
+                quantity: 40,
+                price: 45,
+                requiresPrescription: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'kiosk-002',
+        name: 'Rajpura Health Kiosk',
+        location: 'Rajpura, Punjab',
+        latitude: 30.4831,
+        longitude: 76.5931,
+        distance: 15.2, // km from Nabha
+        address: 'Civil Hospital Road, Rajpura',
+        phone: '+91-9876543216',
+        operatingHours: '7:00 AM - 9:00 PM',
+        services: ['Telemedicine', 'Medicine Dispensing', 'Laboratory Tests', 'Emergency Services'],
+        isActive: true,
+        solarPowered: true,
+        internetConnectivity: '4g',
+        ashaWorkers: [
+          {
+            id: 'asha-003',
+            name: 'Kavita Rani',
+            phone: '+91-9876543217',
+            languages: ['Hindi', 'Punjabi'],
+            experience: '4 years',
+            assignedArea: 'Rajpura Rural',
+            availability: 'available',
+            rating: 4.7,
+            specializations: ['Family Planning', 'Nutrition Counseling', 'Health Education'],
+            kioskId: 'kiosk-002'
+          }
+        ],
+        chwWorkers: [
+          {
+            id: 'chw-003',
+            name: 'Rajinder Kumar',
+            phone: '+91-9876543218',
+            qualification: 'B.Sc Nursing',
+            experience: '10 years',
+            languages: ['Punjabi', 'Hindi', 'English'],
+            availability: 'available',
+            rating: 4.8,
+            kioskId: 'kiosk-002'
+          }
+        ],
+        medicineShops: [
+          {
+            id: 'medshop-002',
+            name: 'Rajpura Pharmacy',
+            location: 'Near Civil Hospital',
+            phone: '+91-9876543219',
+            operatingHours: '8:00 AM - 10:00 PM',
+            distance: 0.2,
+            services: ['Prescription Medicines', 'Generic Drugs', 'Home Delivery'],
+            kioskId: 'kiosk-002',
+            medicineStock: [
+              {
+                medicineId: 'med-004',
+                name: 'Ibuprofen',
+                genericName: 'Ibuprofen',
+                available: true,
+                quantity: 60,
+                price: 35,
+                requiresPrescription: false
+              },
+              {
+                medicineId: 'med-005',
+                name: 'Amlodipine',
+                genericName: 'Amlodipine',
+                available: true,
+                quantity: 25,
+                price: 55,
+                requiresPrescription: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'kiosk-003',
+        name: 'Patiala Health Kiosk',
+        location: 'Patiala, Punjab',
+        latitude: 30.3398,
+        longitude: 76.3869,
+        distance: 35.8, // km from Nabha
+        address: 'Government Medical College Campus',
+        phone: '+91-9876543220',
+        operatingHours: '24/7',
+        services: ['Telemedicine', 'Emergency Care', 'Specialist Consultations', 'Medicine Dispensing'],
+        isActive: true,
+        solarPowered: false,
+        internetConnectivity: 'broadband',
+        ashaWorkers: [
+          {
+            id: 'asha-004',
+            name: 'Anjali Verma',
+            phone: '+91-9876543221',
+            languages: ['English', 'Hindi', 'Punjabi'],
+            experience: '6 years',
+            assignedArea: 'Patiala Urban',
+            availability: 'busy',
+            rating: 4.9,
+            specializations: ['Mental Health', 'Adolescent Health', 'Reproductive Health'],
+            kioskId: 'kiosk-003'
+          }
+        ],
+        chwWorkers: [
+          {
+            id: 'chw-004',
+            name: 'Baljeet Singh',
+            phone: '+91-9876543222',
+            qualification: 'GNM',
+            experience: '12 years',
+            languages: ['Punjabi', 'Hindi'],
+            availability: 'available',
+            rating: 4.9,
+            kioskId: 'kiosk-003'
+          }
+        ],
+        medicineShops: [
+          {
+            id: 'medshop-003',
+            name: 'Medical College Pharmacy',
+            location: 'Hospital Campus',
+            phone: '+91-9876543223',
+            operatingHours: '24/7',
+            distance: 0,
+            services: ['All Medicines', 'Emergency Drugs', 'Specialized Medications'],
+            kioskId: 'kiosk-003',
+            medicineStock: [
+              {
+                medicineId: 'med-006',
+                name: 'Insulin',
+                genericName: 'Insulin',
+                available: true,
+                quantity: 20,
+                price: 120,
+                requiresPrescription: true
+              },
+              {
+                medicineId: 'med-007',
+                name: 'Aspirin',
+                genericName: 'Acetylsalicylic Acid',
+                available: true,
+                quantity: 100,
+                price: 15,
+                requiresPrescription: false
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
     setDoctors(doctorsData);
     setConsultations(consultationsData);
-    
+    setKioskCenters(kioskCentersData);
+
     // Store in AsyncStorage for offline access
     await AsyncStorage.setItem('telemedicineDoctors', JSON.stringify(doctorsData));
     await AsyncStorage.setItem('telemedicineConsultations', JSON.stringify(consultationsData));
+    await AsyncStorage.setItem('kioskCenters', JSON.stringify(kioskCentersData));
   };
 
   const checkConnectionQuality = () => {
@@ -744,28 +1078,66 @@ const TelemedicineSystem: React.FC = () => {
           <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
         </View>
       </View>
-      
+
       <Text style={styles.consultationDate}>📅 {item.scheduledDate} at {item.scheduledTime}</Text>
       <Text style={styles.consultationType}>
         {item.type === 'video' ? '📹' : item.type === 'audio' ? '🎵' : '💬'} {item.type.toUpperCase()} Consultation
       </Text>
       <Text style={styles.consultationSymptoms}>Symptoms: {item.symptoms}</Text>
-      
+
       {item.status === 'scheduled' && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.joinButton}
           onPress={() => startConsultation(item)}
         >
           <Text style={styles.joinButtonText}>Join Consultation</Text>
         </TouchableOpacity>
       )}
-      
+
       {item.status === 'completed' && item.prescription && (
         <View style={styles.prescriptionSection}>
           <Text style={styles.prescriptionLabel}>💊 Prescription:</Text>
           <Text style={styles.prescriptionText}>{item.prescription}</Text>
         </View>
       )}
+    </TouchableOpacity>
+  );
+
+  const renderKioskCenterCard = ({ item }: { item: KioskCenter }) => (
+    <TouchableOpacity
+      style={styles.kioskCenterCard}
+      onPress={() => setSelectedKioskCenter(item)}
+    >
+      <View style={styles.kioskCenterHeader}>
+        <Text style={styles.kioskCenterName}>{item.name}</Text>
+        <Text style={styles.kioskCenterDistance}>{item.distance} km</Text>
+      </View>
+
+      <Text style={styles.kioskCenterLocation}>📍 {item.location}</Text>
+      <Text style={styles.kioskCenterAddress}>{item.address}</Text>
+
+      <View style={styles.kioskCenterServices}>
+        <Text style={styles.servicesLabel}>Services:</Text>
+        <View style={styles.servicesTags}>
+          {item.services.slice(0, 3).map(service => (
+            <View key={service} style={styles.serviceTag}>
+              <Text style={styles.serviceText}>{service}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.kioskCenterMeta}>
+        <Text style={styles.kioskCenterHours}>🕒 {item.operatingHours}</Text>
+        <Text style={styles.kioskCenterPhone}>📞 {item.phone}</Text>
+      </View>
+
+      <View style={styles.kioskCenterFeatures}>
+        {item.solarPowered && <Text style={styles.featureText}>☀️ Solar</Text>}
+        <Text style={styles.featureText}>📡 {item.internetConnectivity.toUpperCase()}</Text>
+        <Text style={styles.featureText}>👥 {item.ashaWorkers.length} ASHA</Text>
+        <Text style={styles.featureText}>👨‍⚕️ {item.chwWorkers.length} CHW</Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -2211,6 +2583,100 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Kiosk Center Styles
+  kioskCenterCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  kioskCenterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  kioskCenterName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    flex: 1,
+  },
+  kioskCenterDistance: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+  },
+  kioskCenterLocation: {
+    fontSize: 14,
+    color: '#3b82f6',
+    marginBottom: 4,
+  },
+  kioskCenterAddress: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 12,
+  },
+  kioskCenterServices: {
+    marginBottom: 12,
+  },
+  servicesLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  servicesTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  serviceTag: {
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  serviceText: {
+    fontSize: 10,
+    color: '#065f46',
+    fontWeight: '500',
+  },
+  kioskCenterMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  kioskCenterHours: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  kioskCenterPhone: {
+    fontSize: 12,
+    color: '#3b82f6',
+    textDecorationLine: 'underline',
+  },
+  kioskCenterFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#f0fdf4',
+    padding: 8,
+    borderRadius: 8,
+  },
+  featureText: {
+    fontSize: 11,
+    color: '#065f46',
+    fontWeight: '500',
   },
 });
 

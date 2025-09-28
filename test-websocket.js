@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 
 console.log('Testing WebSocket connection to sync server...');
 
-const ws = new WebSocket('ws://192.168.46.253:8080/sync?userId=test_user&deviceId=test_device');
+const ws = new WebSocket('ws://localhost:8080/sync?userId=test_user&deviceId=test_device');
 
 ws.on('open', function open() {
   console.log('✅ WebSocket connection successful!');
