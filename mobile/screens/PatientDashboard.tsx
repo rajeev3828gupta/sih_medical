@@ -59,7 +59,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [appointmentModalVisible, setAppointmentModalVisible] = useState(false);
   const [symptomCheckerModalVisible, setSymptomCheckerModalVisible] = useState(false);
-  
+
   // Reschedule appointment modal states
   const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
   const [selectedAppointmentForAction, setSelectedAppointmentForAction] = useState<any>(null);
@@ -1376,74 +1376,8 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
         </View>
       )}
 
-      {/* Health Records Section - Expandable */}
-      <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.expandableHeader}
-          onPress={() => setHealthRecordsExpanded(!healthRecordsExpanded)}
-        >
-          <Text style={styles.sectionTitle}>Health Records</Text>
-          <Text style={styles.expandIcon}>{healthRecordsExpanded ? '▼' : '▶'}</Text>
-        </TouchableOpacity>
-
-        {healthRecordsExpanded && (
-          <View style={styles.expandedContent}>
-            {/* Recent Health Records - Simplified */}
-            <Text style={styles.subSectionTitle}>Recent Records</Text>
-            <View style={styles.healthRecordsList}>
-              {/* Medical History Items */}
-              {medicalHistory.slice(0, 2).map((record) => (
-                <View key={`history-${record.id}`} style={styles.healthRecordItem}>
-                  <Text style={styles.recordDate}>{record.date} - Medical History</Text>
-                  <Text style={styles.recordDiagnosis}>{record.diagnosis}</Text>
-                  <Text style={styles.recordDoctor}>Dr. {record.doctor}</Text>
-                </View>
-              ))}
-
-              {/* Prescription Items */}
-              {displayPrescriptions.slice(0, 2).map((prescription) => (
-                <View key={`prescription-${prescription.id}`} style={styles.healthRecordItem}>
-                  <Text style={styles.recordDate}>{prescription.date} - Prescription</Text>
-                  <Text style={styles.recordDiagnosis}>{prescription.diagnosis}</Text>
-                  <Text style={styles.recordDoctor}>Dr. {prescription.doctor}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* View All Button */}
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => setHealthRecordsModalVisible(true)}
-            >
-              <Text style={styles.viewAllButtonText}>View All Health Records</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {/* Recent Activity - Simplified */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <View style={styles.activityList}>
-          <View style={styles.activityItem}>
-            <Text style={styles.activityIcon}>📋</Text>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Prescription Updated</Text>
-              <Text style={styles.activityDesc}>Dr. Sharma reviewed your meds</Text>
-              <Text style={styles.activityTime}>2 hours ago</Text>
-            </View>
-          </View>
-
-          <View style={styles.activityItem}>
-            <Text style={styles.activityIcon}>💬</Text>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Message from Dr. Patel</Text>
-              <Text style={styles.activityDesc}>Follow-up on your checkup</Text>
-              <Text style={styles.activityTime}>Yesterday</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+     
+      
 
       {/* Medical Consultation Modal */}
       <Modal

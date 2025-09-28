@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export class RealtimeSyncService {
   private static instance: RealtimeSyncService;
   private websocket: WebSocket | null = null;
-  private syncEndpoint: string = 'ws://192.168.46.253:8080/sync'; // Default sync endpoint
-  private httpEndpoint: string = 'http://192.168.46.253:8080/api'; // Default HTTP endpoint
+  private syncEndpoint: string = 'ws://192.168.1.7:8080/sync'; // Default sync endpoint
+  private httpEndpoint: string = 'http://192.168.1.7:8080/api'; // Default HTTP endpoint
   private userId: string = '';
   private deviceId: string = '';
   private listeners: Map<string, Function[]> = new Map();
