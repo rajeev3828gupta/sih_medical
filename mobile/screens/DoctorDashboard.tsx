@@ -780,7 +780,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
           {doctorServices.map((service) => (
             <TouchableOpacity
               key={service.id}
-              style={[styles.serviceCard, { borderLeftColor: service.color }]}
+              style={styles.serviceCard}
               onPress={() => {
                 console.log(`Service card pressed: ${service.title}`);
                 service.action();
@@ -790,7 +790,6 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
               <Text style={styles.serviceIcon}>{service.icon}</Text>
               <Text style={styles.serviceTitle}>{service.title}</Text>
               <Text style={styles.serviceDescription}>{service.description}</Text>
-              <View style={[styles.cardIndicator, { backgroundColor: service.color }]} />
             </TouchableOpacity>
           ))}
         </View>
@@ -1599,33 +1598,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 12,
   },
   serviceCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     width: (width - 60) / 2,
-    marginBottom: 16,
-    borderLeftWidth: 4,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 12,
   },
   serviceIcon: {
-    fontSize: 28,
+    fontSize: 32,
     marginBottom: 8,
   },
   serviceTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#1e293b',
     marginBottom: 4,
+    textAlign: 'center',
   },
   serviceDescription: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#64748b',
+    textAlign: 'center',
   },
   scheduleCard: {
     backgroundColor: '#fff',
