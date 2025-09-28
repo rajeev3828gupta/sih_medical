@@ -30,11 +30,11 @@ const MultiDeviceSyncDemo: React.FC<MultiDeviceSyncDemoProps> = ({ navigation })
   const [autoSync, setAutoSync] = useState(true);
 
   // Mock user for demo
-  const mockUser = {
+  const mockUser = React.useMemo(() => ({
     id: currentUserId,
     role: currentRole,
     name: `Demo ${currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}`
-  };
+  }), [currentUserId, currentRole]);
 
   // Global sync hooks
   const globalSync = useGlobalSync(mockUser);

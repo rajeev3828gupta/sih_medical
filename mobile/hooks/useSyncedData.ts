@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { syncService } from '../services/RealtimeSyncService';
 
 // Custom hook for real-time synchronized data
@@ -6,7 +6,7 @@ export function useSyncedData<T = any>(collection: string, initialData: T[] = []
   const [data, setData] = useState<T[]>(initialData);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState({ connected: false, pendingChanges: 0 });
+  const syncStatusRef = useRef({ connected: false, pendingChanges: 0 });
 
   // Load initial data and subscribe to changes
   useEffect(() => {
@@ -62,7 +62,7 @@ export function useSyncedData<T = any>(collection: string, initialData: T[] = []
 
     // Update sync status periodically
     const statusInterval = setInterval(() => {
-      setSyncStatus(syncService.getSyncStatus());
+      syncStatusRef.current = syncService.getSyncStatus();
     }, 1000);
 
     return () => {
@@ -121,16 +121,16 @@ export function useSyncedData<T = any>(collection: string, initialData: T[] = []
     }
   }, [collection]);
 
-  return {
+  return useMemo(() => ({
     data,
     isLoading,
     error,
-    syncStatus,
+    syncStatus: syncStatusRef.current,
     addData,
     updateData,
     deleteData,
     refreshData
-  };
+  }), [data, isLoading, error, addData, updateData, deleteData, refreshData]);
 }
 
 // Hook for synced consultations

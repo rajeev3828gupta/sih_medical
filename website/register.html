@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registration - Telemedicine Nabha</title>
+<style>
+/* --- Reset & Body --- */
+* { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+body { background: #000; display:flex; justify-content:center; padding:20px; }
+
+/* --- Mobile-width Container --- */
+.main-container {
+    width: 600px; /* Mobile width */
+    background: #0f172a; /* Login page background */
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+/* --- Header --- */
+.header-section {
+    background: #1e293b; /* Exact login page header color */
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.logo-icon {
+    width: 100px; height: 100px; margin: 0 auto 20px;
+    border-radius: 50%; background: #0f766e;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 36px; font-weight: 900;
+    color: #fff; border:3px solid #fff;
+    box-shadow:0 8px 15px rgba(15,118,110,0.4);
+    transition: transform 0.5s;
+}
+.header-section h1 { font-size: 28px; font-weight:700; margin-bottom: 8px; color: #fff; }
+.header-section p { font-size: 16px; color: #94a3b8; }
+
+/* --- Container --- */
+.container { padding: 20px; }
+
+/* --- Step Titles --- */
+.step-title { font-size: 28px; font-weight:700; margin-bottom: 16px; text-align:center; color:#fff; }
+.step-subtitle { font-size:16px; color:#94a3b8; text-align:center; margin-bottom:20px; }
+
+/* --- Role Selection Cards --- */
+.roles-grid { display: flex; flex-direction: column; gap: 15px; }
+.role-card {
+    background:#1e293b; border-radius:15px; padding:20px;
+    border:2px solid #1e293b; cursor:pointer;
+    transition: all 0.3s;
+    text-align:center;
+}
+.role-card.selected { border-color: #0f766e; background: #0f766e10; }
+.role-card .role-icon { font-size: 36px; margin-bottom: 8px; }
+.role-card .role-title { font-weight:600; margin-bottom:5px; color: #fff; }
+.role-card .role-desc { font-size:14px; color:#94a3b8; }
+
+/* --- Form Fields --- */
+.form-group { margin-bottom: 20px; }
+.form-group label { display:block; font-weight:600; margin-bottom:8px; color:#fff; }
+.form-group input, .form-group textarea {
+    width:100%; padding:15px; border-radius:12px; border:1px solid #1e293b;
+    font-size:16px; background:#0f172a; color:#fff;
+}
+.form-group textarea { resize: vertical; }
+
+/* --- Buttons --- */
+.button {
+    display:block; width:100%; padding:16px; border-radius:12px;
+    font-weight:700; font-size:16px; border:none; cursor:pointer;
+    margin-top:10px; text-align:center;
+    transition: background 0.3s;
+}
+.button-primary { background:#0f766e; color:#fff; }
+.button-primary:hover { background:#0d5a54; }
+.button-secondary { background:#1e293b; border:1px solid #64748b; color:#94a3b8; }
+.button-secondary:hover { background:#0f766e10; }
+
+/* --- Back button --- */
+.back-button { width:40px; height:40px; border-radius:20px; background:#1e293b; display:flex; justify-content:center; align-items:center; margin-bottom:10px; cursor:pointer; }
+.back-button span { font-size:20px; color:#fff; font-weight:600; }
+
+/* --- Modal --- */
+.modal-overlay {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center;
+    padding:20px; display:none;
+}
+.modal { background:#0f172a; padding:30px; border-radius:20px; max-width:400px; width:100%; text-align:center; color:#fff; }
+.modal h2 { font-size:24px; margin-bottom:12px; color:#0f766e; }
+.modal p { font-size:16px; color:#94a3b8; margin-bottom:12px; }
+.modal .id-box { display:flex; justify-content:space-between; align-items:center; background:#0f766e10; border:2px solid #0f766e; border-radius:12px; padding:10px 15px; margin-bottom:15px; color:#0f766e; }
+.modal .id-box span { font-weight:bold; font-family:monospace; }
+.modal .modal-buttons { display:flex; gap:12px; }
+.modal .modal-buttons button { flex:1; padding:12px; border-radius:12px; font-weight:600; }
+
+/* --- Home button --- */
+.home-button {
+    display:block; width:100%; padding:14px; border-radius:12px;
+    background:#64748b; color:#fff; text-align:center; font-weight:600; margin-top:15px; cursor:pointer;
+    transition: background 0.3s;
+}
+.home-button:hover { background:#525f6c; }
+
+</style>
+</head>
+<body>
+
+<div class="main-container">
+
+<div class="header-section">
+    <div class="logo-icon">TN</div>
+    <h1>Telemedicine Nabha</h1>
+    <p>Advanced Healthcare Solutions</p>
+</div>
+
+<div class="container">
+
+<!-- Step 1: Role Selection -->
+<div id="step1">
+    <div class="step-title">Select Your Role</div>
+    <div class="step-subtitle">Choose your role to register</div>
+    <div class="roles-grid">
+        <div class="role-card" data-role="patient"><div class="role-icon">🧑‍💼</div><div class="role-title">Patient</div><div class="role-desc">Register as patient</div></div>
+        <div class="role-card" data-role="doctor"><div class="role-icon">👨‍⚕️</div><div class="role-title">Doctor</div><div class="role-desc">Register as doctor</div></div>
+        <div class="role-card" data-role="chemist"><div class="role-icon">💊</div><div class="role-title">Chemist</div><div class="role-desc">Register as chemist</div></div>
+        <div class="role-card" data-role="admin"><div class="role-icon">⚙️</div><div class="role-title">Admin</div><div class="role-desc">Register as admin</div></div>
+    </div>
+</div>
+
+<!-- Step 2: Registration Form -->
+<div id="step2" style="display:none;">
+    <div class="back-button" onclick="backToStep1()"><span>←</span></div>
+    <div class="step-title" id="formTitle">Registration Form</div>
+
+    <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="fullName" placeholder="Enter full name">
+    </div>
+    <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Enter email">
+    </div>
+    <div class="form-group">
+        <label>Phone</label>
+        <input type="text" id="phone" placeholder="Enter phone">
+    </div>
+
+    <!-- Role-specific fields -->
+    <div id="roleFields"></div>
+
+    <button class="button button-primary" onclick="submitRegistration()">Complete Registration</button>
+    <button class="button button-secondary" onclick="goToLogin()">Already have an account? Login</button>
+    <button class="home-button" onclick="goHome()">Home</button>
+</div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="successModal">
+    <div class="modal">
+        <h2>✅ Registration Submitted!</h2>
+        <p>Your registration request has been submitted for admin approval.</p>
+        <div class="id-box">
+            <span id="registrationId">ABC12345</span>
+            <button onclick="copyId()">📋 Copy</button>
+        </div>
+        <div class="modal-buttons">
+            <button class="button button-secondary" onclick="copyId()">Copy ID Again</button>
+            <button class="button button-primary" onclick="closeModal()">Continue to Login</button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+// Step Flow
+let selectedRole = '';
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const formTitle = document.getElementById('formTitle');
+const roleFields = document.getElementById('roleFields');
+
+document.querySelectorAll('.role-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+        document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedRole = card.dataset.role;
+        step1.style.display='none';
+        step2.style.display='block';
+        renderRoleFields();
+        formTitle.textContent = selectedRole.charAt(0).toUpperCase()+selectedRole.slice(1)+' Registration';
+    });
+});
+
+function backToStep1() { step2.style.display='none'; step1.style.display='block'; }
+
+// Role-specific fields
+function renderRoleFields() {
+    roleFields.innerHTML = '';
+    if(selectedRole==='doctor'){
+        roleFields.innerHTML=`
+        <div class="form-group"><label>Medical License</label><input type="text" id="medicalLicense" placeholder="Enter license"></div>
+        <div class="form-group"><label>Specialization</label><input type="text" id="specialization" placeholder="Specialization"></div>
+        <div class="form-group"><label>Hospital</label><input type="text" id="hospital" placeholder="Hospital"></div>
+        <div class="form-group"><label>Experience (Years)</label><input type="number" id="experience" placeholder="Years of experience"></div>`;
+    } else if(selectedRole==='chemist'){
+        roleFields.innerHTML=`
+        <div class="form-group"><label>Pharmacy Name</label><input type="text" id="pharmacyName" placeholder="Enter pharmacy name"></div>
+        <div class="form-group"><label>Pharmacy License</label><input type="text" id="pharmacyLicense" placeholder="License"></div>
+        <div class="form-group"><label>Pharmacy Address</label><textarea id="pharmacyAddress" placeholder="Complete address"></textarea></div>`;
+    } else if(selectedRole==='admin'){
+        roleFields.innerHTML=`
+        <div class="form-group"><label>Admin Code</label><input type="text" id="adminCode" placeholder="Enter code"></div>
+        <div class="form-group"><label>Department</label><input type="text" id="department" placeholder="Department"></div>`;
+    }
+}
+
+// Registration Submission
+function submitRegistration() {
+    if(!selectedRole || !document.getElementById('fullName').value || !document.getElementById('email').value || !document.getElementById('phone').value){
+        alert('Please fill in all required fields');
+        return;
+    }
+    document.getElementById('registrationId').textContent = 'REG'+Math.floor(Math.random()*90000+10000);
+    document.getElementById('successModal').style.display='flex';
+}
+
+// Modal
+function closeModal(){ document.getElementById('successModal').style.display='none'; }
+function copyId(){ 
+    const id = document.getElementById('registrationId').textContent;
+    navigator.clipboard.writeText(id).then(()=>{ alert('✅ Registration ID copied: '+id); });
+}
+
+// Login & Home Redirection
+function goToLogin(){ window.location.href = 'login.html'; }
+function goHome(){ window.location.href = 'landing-page.html'; } // Change to landing page URL
+</script>
+
+</body>
+</html>

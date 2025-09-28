@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { globalSyncService } from '../services/GlobalSyncService';
 import { useSyncedConsultations, useSyncedAppointments, useSyncedPrescriptions, useSyncedDoctors } from './useSyncedData';
 
 // Enhanced hook for multi-device synchronization
 export function useGlobalSync(user: any) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<any>(null);
+  const syncStatusRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Get all synced data hooks
@@ -29,8 +29,7 @@ export function useGlobalSync(user: any) {
       setIsInitialized(true);
       
       // Update sync status
-      const status = globalSyncService.getSyncStatus();
-      setSyncStatus(status);
+      syncStatusRef.current = globalSyncService.getSyncStatus();
       
       console.log('✅ Global sync initialized successfully');
     } catch (err) {
@@ -52,8 +51,7 @@ export function useGlobalSync(user: any) {
     if (!isInitialized) return;
 
     const statusInterval = setInterval(() => {
-      const status = globalSyncService.getSyncStatus();
-      setSyncStatus(status);
+      syncStatusRef.current = globalSyncService.getSyncStatus();
     }, 5000); // Check every 5 seconds
 
     return () => clearInterval(statusInterval);
@@ -90,66 +88,94 @@ export function useGlobalSync(user: any) {
     return {
       isHealthy: isInitialized && !error && totalRecords > 0,
       totalRecords,
-      lastSync: syncStatus?.lastSync || null,
-      isOnline: syncStatus?.syncStatus?.isConnected || false,
+      lastSync: syncStatusRef.current?.lastSync || null,
+      isOnline: syncStatusRef.current?.syncStatus?.isConnected || false,
       ...counts
     };
-  }, [isInitialized, error, getDataCounts, syncStatus]);
+  }, [isInitialized, error, getDataCounts]);
 
-  return {
+  return useMemo(() => ({
     // Status
     isInitialized,
-    syncStatus,
+    syncStatus: syncStatusRef.current,
     error,
-    
+
     // Data
     consultations: consultations.data || [],
     appointments: appointments.data || [],
     prescriptions: prescriptions.data || [],
     doctors: doctors.data || [],
-    
+
     // Data operations
     addConsultation: consultations.addData,
     updateConsultation: consultations.updateData,
     deleteConsultation: consultations.deleteData,
-    
+
     addAppointment: appointments.addData,
     updateAppointment: appointments.updateData,
     deleteAppointment: appointments.deleteData,
-    
+
     addPrescription: prescriptions.addData,
     updatePrescription: prescriptions.updateData,
     deletePrescription: prescriptions.deleteData,
-    
+
     addDoctor: doctors.addData,
     updateDoctor: doctors.updateData,
     deleteDoctor: doctors.deleteData,
-    
+
     // Utility functions
     forceSync,
     getDataCounts,
     getSyncHealth,
-    
+
     // Loading states
     isLoadingConsultations: consultations.isLoading,
     isLoadingAppointments: appointments.isLoading,
     isLoadingPrescriptions: prescriptions.isLoading,
     isLoadingDoctors: doctors.isLoading,
-    
+
     // Individual sync statuses
     consultationsSyncStatus: consultations.syncStatus,
     appointmentsSyncStatus: appointments.syncStatus,
     prescriptionsSyncStatus: prescriptions.syncStatus,
     doctorsSyncStatus: doctors.syncStatus
-  };
+  }), [
+    isInitialized,
+    error,
+    consultations.data,
+    appointments.data,
+    prescriptions.data,
+    doctors.data,
+    consultations.addData,
+    consultations.updateData,
+    consultations.deleteData,
+    appointments.addData,
+    appointments.updateData,
+    appointments.deleteData,
+    prescriptions.addData,
+    prescriptions.updateData,
+    prescriptions.deleteData,
+    doctors.addData,
+    doctors.updateData,
+    doctors.deleteData,
+    forceSync,
+    getDataCounts,
+    getSyncHealth,
+    consultations.isLoading,
+    appointments.isLoading,
+    prescriptions.isLoading,
+    doctors.isLoading,
+    consultations.syncStatus,
+    appointments.syncStatus,
+    prescriptions.syncStatus,
+    doctors.syncStatus
+  ]);
 }
 
 // Hook for role-specific data filtering
 export function useRoleBasedData(user: any, globalData: any) {
-  const [filteredData, setFilteredData] = useState<any>({});
-
-  useEffect(() => {
-    if (!user?.id || !globalData) return;
+  return useMemo(() => {
+    if (!user?.id || !globalData) return {};
 
     const role = user.role?.toLowerCase();
     const userId = user.id;
@@ -178,7 +204,7 @@ export function useRoleBasedData(user: any, globalData: any) {
       case 'chemist':
       case 'pharmacist':
         filtered = {
-          availablePrescriptions: globalData.prescriptions?.filter((p: any) => 
+          availablePrescriptions: globalData.prescriptions?.filter((p: any) =>
             ['prescribed', 'partially_filled'].includes(p.status)
           ) || [],
           myOrders: globalData.prescriptions?.filter((p: any) => p.chemistId === userId) || [],
@@ -207,10 +233,8 @@ export function useRoleBasedData(user: any, globalData: any) {
         };
     }
 
-    setFilteredData(filtered);
+    return filtered;
   }, [user?.id, user?.role, globalData]);
-
-  return filteredData;
 }
 
 // Hook for real-time notifications

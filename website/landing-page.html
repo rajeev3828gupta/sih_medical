@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIH Medical - Telemedicine for Rural Healthcare</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --card-dark: #1e1e1e;
+            --text-light: #e0e0e0;
+            --text-primary: #ffffff;
+            --accent-blue: #0891b2;
+            --accent-green: #4ade80;
+            --border-dark: #404040;
+            --header-blue: #0d9488;
+            --hover-blue: #0f766e;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+            --art-blob1: #0891b2;
+            --art-blob2: #4ade80;
+            --art-blob3: #0d9488;
+        }
+        html{
+            scroll-behavior: smooth;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-light);
+            background: var(--bg-dark);
+            overflow-x: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Modern Art Blobs */
+        .art-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.1;
+            z-index: -1;
+            animation: blobFloat 20s infinite ease-in-out;
+        }
+
+        .blob1 {
+            width: 300px;
+            height: 300px;
+            background: var(--art-blob1);
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .blob2 {
+            width: 200px;
+            height: 200px;
+            background: var(--art-blob2);
+            top: 60%;
+            right: 20%;
+            animation-delay: 5s;
+        }
+
+        .blob3 {
+            width: 150px;
+            height: 150px;
+            background: var(--art-blob3);
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 10s;
+        }
+
+        @keyframes blobFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            perspective: 1200px;
+        }
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            color: var(--text-primary);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            animation: headerGlow 3s ease-in-out infinite alternate;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transform: rotateX(5deg);
+            transition: transform 0.3s ease;
+        }
+
+        nav:hover {
+            transform: rotateX(0deg);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: logoPulse 2s ease-in-out infinite;
+            transform: perspective(500px) rotateY(10deg);
+            display: inline-block;
+            transition: transform 0.5s ease;
+        }
+
+        .logo:hover {
+            transform: perspective(500px) rotateY(0deg) rotateZ(360deg);
+        }
+
+        .logo::after {
+            content: ' - Empowering Rural Health';
+            font-size: 0.8rem;
+            opacity: 0.8;
+            display: block;
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-left: 2rem;
+        }
+
+        .nav-links a {
+            position: relative;
+            color: #ffffff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a:hover {
+            color: #b3d9ff;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+        .btn {
+            background: var(--accent-blue);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        .btn:hover {
+            background: var(--hover-blue);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(8, 145, 178, 0.5);
+        }
+        /* Hero */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-primary);
+            animation: fadeIn 1s ease-in;
+            position: relative;
+            overflow: hidden;
+            perspective: 1500px;
+        }
+
+        .hero-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            z-index: 2;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            transform: none;
+            transition: transform 0.6s ease;
+        }
+
+        .hero-content:hover {
+            transform: rotateX(0deg) translateZ(0);
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(8,145,178,0.2) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(74, 222, 128, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: particleFloat 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #00bfff, #00ff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        .hero p {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            margin: 0 auto 2rem;
+            max-width: 600px;
+            text-shadow: 1px 1px 3px rgba(224, 218, 218, 0.7);
+            text-align: center;
+        }
+        /* Features */
+        .features {
+            padding: 5rem 0;
+            background: var(--card-dark);
+            animation: slideUp 0.8s ease-out;
+        }
+        .features h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--text-primary);
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        @media (min-width: 769px) {
+            .features-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        .feature-card {
+            background: var(--card-dark);
+            padding: 2.5rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px var(--shadow-dark), 0 0 20px rgba(8,145,178,0.1);
+            text-align: center;
+            transform: perspective(1000px) rotateX(5deg) rotateY(5deg) translateZ(0);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: 1px solid var(--border-dark);
+            animation: staggerIn 0.6s ease forwards;
+            opacity: 1;
+            transform-style: preserve-3d;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+        .feature-card:nth-child(5) { animation-delay: 0.5s; }
+        .feature-card:nth-child(6) { animation-delay: 0.6s; }
+        .feature-card:nth-child(7) { animation-delay: 0.7s; }
+        .feature-card:nth-child(8) { animation-delay: 0.8s; }
+        .feature-card:nth-child(9) { animation-delay: 0.9s; }
+        .feature-card:hover {
+            transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 50px rgba(8,145,178,0.4);
+            border-color: var(--accent-blue);
+        }
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--accent-green);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        }
+        .feature-card h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+        .feature-card p {
+            color: var(--text-light);
+        }
+
+        /* Variable card heights */
+        .feature-card:nth-child(2) {
+            min-height: 280px;
+        }
+        .feature-card:nth-child(4) {
+            min-height: 350px;
+        }
+        .feature-card:nth-child(5) {
+            min-height: 300px;
+        }
+
+
+        /* About */
+        .about {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, var(--card-dark), #0a0a0a);
+            color: var(--text-light);
+            position: relative;
+            animation: fadeIn 1s ease-in;
+        }
+        .about::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background: radial-gradient(ellipse, rgba(0,123,255,0.1) 0%, transparent 50%);
+        }
+        .about-content {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+        .about-text {
+            flex: 1;
+            transform: skew(-5deg);
+            background: rgba(30, 30, 30, 0.8);
+            padding: 2rem;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+        .about-text h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 1.5rem;
+            color: var(--accent-blue);
+            transform: skew(5deg);
+        }
+        .about-image {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        .about-image img {
+            max-width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px var(--shadow-dark);
+            border: 2px solid var(--border-dark);
+            filter: drop-shadow(0 0 20px rgba(8,145,178,0.2));
+            transform: rotate(2deg);
+        }
+        /* Services */
+ .services {
+    padding: 5rem 0;
+    background: var(--bg-dark);
+    position: relative;
+    overflow: hidden; /* keeps ECG inside */
+    animation: slideUp 0.8s ease-out;
+}
+
+.services h2 {
+    text-align: center;
+    margin-bottom: 3rem;
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: var(--text-primary);
+}
+
+/* Grid Layout */
+.services-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 2rem;
+    position: relative;
+    z-index: 1; /* cards above ECG */
+}
+
+/* Card Styling */
+.service-item {
+    text-align: center;
+    background: var(--card-dark);
+    padding: 2.5rem 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow-dark);
+    transform: perspective(500px) rotateY(5deg) rotateX(5deg) rotate(5deg);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-dark);
+    width: 250px;
+    flex: 1 1 200px;
+    margin: 1rem;
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+}
+
+.service-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.service-item:hover::before {
+    opacity: 1;
+}
+
+.service-item:nth-child(odd) {
+    min-height: 320px;
+}
+
+.service-item:nth-child(even) {
+    min-height: 280px;
+}
+
+.service-item:hover {
+    transform: perspective(500px) rotateY(0deg) rotateX(0deg) translateY(-10px) rotate(360deg);
+    box-shadow: 0 15px 40px rgba(40,167,69,0.3);
+    border-color: var(--accent-green);
+}
+
+/* Icons */
+.service-icon {
+    font-size: 3rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: block;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, var(--accent-blue), var(--hover-blue));
+    border-radius: 50%;
+    line-height: 80px;
+    margin: 0 auto 1rem;
+    box-shadow: 0 0 20px rgba(8,145,178,0.4);
+}
+
+/* Text */
+.service-item h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.service-item p {
+    color: var(--text-light);
+}
+
+/* Make sure content is above ECG */
+.service-item > *:not(.heartbeat-ecg-bg) {
+    position: relative;
+    z-index: 1;
+}
+
+/* ECG Background */
+.heartbeat-ecg-bg {
+    position: absolute;
+    bottom: 20%;
+    left: 0;
+    width: 100%;
+    height: 160px;
+    z-index: 0;
+    opacity: 0.8; /* subtle background */
+}
+
+.heartbeat-ecg-bg path {
+    stroke: #00ff88;      
+    stroke-width: 3;
+    fill: none;
+    stroke-dasharray: 1000;  
+    stroke-dashoffset: 1000;
+    animation: ecg 1.8s linear infinite; /* heartbeat speed */
+    filter: drop-shadow(0 0 8px #00ff88);
+}
+
+/* ECG Animation Keyframes */
+@keyframes ecg {
+    0% {
+        stroke-dashoffset: 1000;
+    }
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* Slide Up Animation for section */
+@keyframes slideUp {
+    0% {opacity:0; transform: translateY(50px);}
+    100% {opacity:1; transform: translateY(0);}
+}
+
+
+        /* Facts */
+        .facts {
+    padding: 5rem 0;
+    background: var(--bg-dark);
+    animation: slideUp 0.8s ease-out;
+    position: relative;
+    overflow: hidden; /* keep ECG inside */
+}
+
+.facts h2 {
+    text-align: center;
+    margin-bottom: 3rem;
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: var(--text-primary);
+}
+
+.facts-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 2rem;
+    position: relative;
+    z-index: 1; /* keeps cards above ECG */
+}
+
+.fact-item {
+    text-align: center;
+    background: var(--card-dark);
+    padding: 2.5rem 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow-dark);
+    transform: perspective(500px) rotateY(5deg) rotateX(5deg) rotate(5deg);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-dark);
+    width: 250px;
+    flex: 1 1 200px;
+    margin: 1rem;
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+}
+
+.fact-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.fact-item:hover::before {
+    opacity: 1;
+}
+
+.fact-item:nth-child(odd) { min-height: 320px; }
+.fact-item:nth-child(even) { min-height: 280px; }
+
+.fact-item:hover {
+    transform: perspective(500px) rotateY(0deg) rotateX(0deg) translateY(-10px) rotate(360deg);
+    box-shadow: 0 15px 40px rgba(40,167,69,0.3);
+    border-color: var(--accent-green);
+}
+
+.fact-icon {
+    font-size: 3rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: block;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, var(--accent-blue), var(--hover-blue));
+    border-radius: 50%;
+    line-height: 80px;
+    margin: 0 auto 1rem;
+    box-shadow: 0 0 20px rgba(8,145,178,0.4);
+}
+
+.fact-item h3 { color: var(--text-primary); margin-bottom: 0.5rem; }
+.fact-item p { color: var(--text-light); }
+
+/* ensure content above ECG */
+.fact-item > *:not(.heartbeat-ecg-bg) { position: relative; z-index: 1; }
+
+
+        /* Testimonials */
+       
+
+        /* Security */
+        .security {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, var(--card-dark), #0a0a0a);
+            color: var(--text-light);
+            position: relative;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .security::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background: radial-gradient(ellipse, rgba(0,123,255,0.1) 0%, transparent 50%);
+        }
+        .security h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--text-primary);
+        }
+        .security-content {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+        .security-text {
+            flex: 1;
+            transform: skew(-5deg);
+            background: rgba(30, 30, 30, 0.8);
+            padding: 2rem;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .security-text h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 1.5rem;
+            color: var(--accent-blue);
+            transform: skew(5deg);
+        }
+        .security-text p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+        .security-image {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        .security-image img {
+            max-width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px var(--shadow-dark);
+            border: 2px solid var(--border-dark);
+            filter: drop-shadow(0 0 20px rgba(8,145,178,0.2));
+            transform: rotate(2deg);
+        }
+        /* Offline */
+        .offline {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, var(--card-dark), #0a0a0a);
+            color: var(--text-light);
+            position: relative;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .offline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background: radial-gradient(ellipse, rgba(0,123,255,0.1) 0%, transparent 50%);
+        }
+        .offline h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--text-primary);
+        }
+        .offline-content {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+        .offline-text {
+            flex: 1;
+            transform: skew(-5deg);
+            background: rgba(30, 30, 30, 0.8);
+            padding: 2rem;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .offline-text h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 1.5rem;
+            color: var(--accent-blue);
+            transform: skew(5deg);
+        }
+        .offline-text p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+        .offline-image {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        .offline-image img {
+            max-width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px var(--shadow-dark);
+            border: 2px solid var(--border-dark);
+            filter: drop-shadow(0 0 20px rgba(8,145,178,0.2));
+            transform: rotate(2deg);
+        }
+        
+        .dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border-dark);
+            transition: background 0.3s;
+            cursor: pointer;
+        }
+        .dot.active {
+            background: var(--accent-blue);
+        }
+        /* Contact */
+        .contact {
+            padding: 5rem 0;
+            background: var(--bg-dark);
+            animation: slideUp 0.8s ease-out;
+        }
+        .contact h2 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--text-primary);
+        }
+        .contact-form {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px var(--shadow-dark);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(42, 42, 42, 0.8);
+            border: 1px solid var(--border-dark);
+            border-radius: 10px;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(8,145,178,0.3);
+            background: rgba(42, 42, 42, 1);
+            transform: perspective(500px) rotateX(5deg);
+            transition: all 0.3s ease;
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #888;
+        }
+        .form-group input:focus::placeholder,
+        .form-group textarea:focus::placeholder {
+            color: transparent;
+        }
+        .contact .btn {
+    display: block; /* makes sure button takes space */
+    width: 100%; /* full width inside form */
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0, 255, 136, 0.4);
+    margin-top: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.contact .btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(0, 255, 136, 0.6);
+}
+
+.contact .btn:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 6px 15px rgba(0, 255, 136, 0.3);
+}
+        .btn {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0, 255, 136, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 12px 25px rgba(0, 255, 136, 0.6);
+}
+
+.btn:active {
+    transform: translateY(0px) scale(0.98);
+    box-shadow: 0 6px 15px rgba(0, 255, 136, 0.3);
+}
+
+/* Optional ripple effect */
+.btn::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: -100%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: skewX(-20deg);
+    transition: all 0.5s ease;
+}
+
+.btn:hover::after {
+    left: 100%;
+}
+
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(8,145,178,0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(8,145,178,0); }
+            100% { box-shadow: 0 0 0 0 rgba(8,145,178,0); }
+        }
+        @keyframes staggerIn {
+            from { opacity: 0; transform: translateY(50px) perspective(1000px) rotateX(20deg); }
+            to { opacity: 1; transform: translateY(0) perspective(1000px) rotateX(5deg); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100px); }
+        }
+
+        @keyframes headerGlow {
+            from { box-shadow: 0 2px 20px rgba(13, 148, 136, 0.3); }
+            to { box-shadow: 0 2px 30px rgba(8, 145, 178, 0.5); }
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(8, 145, 178, 0.8); }
+        }
+
+        @keyframes particleFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg) rotateX(0deg); }
+            33% { transform: translateY(-30px) rotate(120deg) rotateX(10deg); }
+            66% { transform: translateY(-10px) rotate(240deg) rotateX(-5deg); }
+        }
+
+        /* Reveal animation for scroll */
+        .reveal {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        .feature-card.reveal {
+            opacity: 1 !important;
+            transform: perspective(1000px) rotateX(5deg) rotateY(5deg) translateZ(0) !important;
+        }
+
+        /* 4D Depth Animation for Sections */
+        section {
+            transform-style: preserve-3d;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hero {
+                padding: 0 1rem;
+            }
+            .about-content,
+            .security-content {
+                flex-direction: column;
+            }
+            .about-text,
+            .security-text {
+                transform: none;
+            }
+            .about-text h2,
+            .security-text h2 {
+                transform: none;
+            }
+
+            .security-text {
+                transform: none;
+            }
+            .services-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+            .service-item {
+                width: 80%;
+                transform: none;
+            }
+            .service-item:hover {
+                transform: translateY(-5px);
+            }
+            .footer-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+    <body>
+        <!-- Modern Art Blobs -->
+        <div class="art-blob blob1"></div>
+        <div class="art-blob blob2"></div>
+        <div class="art-blob blob3"></div>
+
+        <header>
+            <nav class="container">
+                <div class="logo">SIH Medical</div>
+                <ul class="nav-links">
+                    <li><a href="#hero">Home</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#security">Security</a></li>
+                    <li><a href="#facts">Facts</a></li>
+                    <li><a href="#offline">Offline</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+                <div class="nav-buttons">
+                    <a href="login.html" class="btn">Login</a>
+                    <a href="register.html" class="btn">Register</a>
+                </div>
+            </nav>
+        </header>
+
+    <section id="hero" class="hero">
+        <video class="hero-video" autoplay muted loop>
+            <source src="vedio/bg.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+        <div class="hero-content">
+            <h1>Revolutionizing Rural Healthcare</h1>
+            <p>Advanced telemedicine solutions connecting patients in remote areas with quality healthcare services through our innovative mobile app.</p>
+            <a href="register.html" class="btn">Get Started</a>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-video"></i></div>
+                    <h3>Teleconsultation</h3>
+                    <p>Connect with doctors remotely via video calls for personalized healthcare advice.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-brain"></i></div>
+                    <h3>AI Symptom Checker</h3>
+                    <p>Advanced AI-powered symptom analysis to help identify potential health issues.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-file-medical"></i></div>
+                    <h3>Offline Health Records</h3>
+                    <p>Access your medical records even without internet connectivity.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-pills"></i></div>
+                    <h3>Pharmacy Integration</h3>
+                    <p>Easy access to nearby pharmacies and online medicine ordering.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h3>Emergency Alerts</h3>
+                    <p>Quick SOS for urgent medical needs with instant doctor notification.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <h3>Appointment Booking</h3>
+                    <p>Schedule consultations easily with calendar integration and reminders.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2>About SIH Medical</h2>
+                    <p>SIH Medical is dedicated to bridging the healthcare gap in rural areas through innovative telemedicine technology. Our platform empowers patients with easy access to medical consultations, symptom checking, and health record management.</p>
+                    <p>Developed as part of the Smart India Hackathon, our solution integrates AI, multi-device synchronization, and offline capabilities to ensure healthcare reaches everyone, everywhere.</p>
+                </div>
+                <div class="about-image">
+                    <img src="images/rural2.png" alt="Healthcare Innovation">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="services">
+    <!-- ECG Line Background -->
+    <svg class="heartbeat-ecg-bg" viewBox="0 0 500 100" preserveAspectRatio="none">
+        <path d="
+            M0,50 L20,50 L25,40 L30,70 L35,50 
+            L50,50 
+            L55,48 L60,52 L65,50 
+            L80,50 
+            L85,40 L90,70 L95,50 
+            L110,50
+            L115,48 L120,52 L125,50
+            L140,50
+            L145,40 L150,70 L155,50
+            L170,50
+            L175,48 L180,52 L185,50
+            L200,50
+            L205,40 L210,70 L215,50
+            L230,50
+            L235,48 L240,52 L245,50
+            L260,50
+            L265,40 L270,70 L275,50
+            L290,50
+            L295,48 L300,52 L305,50
+            L320,50
+            L325,40 L330,70 L335,50
+            L350,50
+            L355,48 L360,52 L365,50
+            L380,50
+            L385,40 L390,70 L395,50
+            L410,50
+            L415,48 L420,52 L425,50
+            L440,50
+            L445,40 L450,70 L455,50
+            L470,50
+            L475,48 L480,52 L485,50
+            L500,50
+        "/>
+    </svg>
+
+    <div class="container">
+        <h2>Our Services</h2>
+        <div class="services-grid">
+            <div class="service-item">
+                <div class="service-icon"><i class="fas fa-user-md"></i></div>
+                <h3>Doctor Consultations</h3>
+                <p>Expert medical advice from certified healthcare professionals.</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon"><i class="fas fa-flask"></i></div>
+                <h3>Diagnostic Support</h3>
+                <p>AI-assisted diagnostics and symptom analysis.</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon"><i class="fas fa-prescription-bottle"></i></div>
+                <h3>Medicine Delivery</h3>
+                <p>Convenient online pharmacy and home delivery services.</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon"><i class="fas fa-file-medical"></i></div>
+                <h3>Health Records</h3>
+                <p>Secure storage and management of medical history.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+    <section id="security" class="security">
+        
+        <div class="container">
+            <div class="security-content">
+                <div class="security-text">
+                    <h2>Security & Privacy</h2>
+                    <p>Your health data is our top priority. SIH Medical employs end-to-end encryption for all communications and data storage, ensuring complete confidentiality.</p>
+                    <p>We are fully compliant with HIPAA standards and conduct regular security audits. Features include two-factor authentication, secure video consultations, and encrypted health records accessible only to authorized users.</p>
+                    <p>Trust in our platform to protect your privacy while delivering seamless healthcare services.</p>
+                </div>
+                <div class="security-image">
+                    <img src="images/security.png" alt="Security Features">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="facts" class="facts">
+        <svg class="heartbeat-ecg-bg" viewBox="0 0 500 100" preserveAspectRatio="none">
+        <path d="
+            M0,50 L20,50 L25,40 L30,70 L35,50 
+            L50,50 
+            L55,48 L60,52 L65,50 
+            L80,50 
+            L85,40 L90,70 L95,50 
+            L110,50
+            L115,48 L120,52 L125,50
+            L140,50
+            L145,40 L150,70 L155,50
+            L170,50
+            L175,48 L180,52 L185,50
+            L200,50
+            L205,40 L210,70 L215,50
+            L230,50
+            L235,48 L240,52 L245,50
+            L260,50
+            L265,40 L270,70 L275,50
+            L290,50
+            L295,48 L300,52 L305,50
+            L320,50
+            L325,40 L330,70 L335,50
+            L350,50
+            L355,48 L360,52 L365,50
+            L380,50
+            L385,40 L390,70 L395,50
+            L410,50
+            L415,48 L420,52 L425,50
+            L440,50
+            L445,40 L450,70 L455,50
+            L470,50
+            L475,48 L480,52 L485,50
+            L500,50
+        "/>
+    </svg>
+        <div class="container">
+            <h2>Key Facts</h2>
+            <div class="facts-grid">
+                <div class="fact-item">
+                    <div class="fact-icon"><i class="fas fa-users"></i></div>
+                    <h3>70% Rural Population</h3>
+                    <p>Over 70% of India's population lives in rural areas, facing healthcare access challenges.</p>
+                </div>
+                <div class="fact-item">
+                    <div class="fact-icon"><i class="fas fa-stethoscope"></i></div>
+                    <h3>Shortage of Doctors</h3>
+                    <p>Rural areas have only 1 doctor per 10,000 people compared to urban areas.</p>
+                </div>
+                <div class="fact-item">
+                    <div class="fact-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <h3>Mobile Penetration</h3>
+                    <p>Over 90% of rural Indians have access to mobile phones, enabling telemedicine solutions.</p>
+                </div>
+                <div class="fact-item">
+                    <div class="fact-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>Telemedicine Growth</h3>
+                    <p>Telemedicine market in India is expected to reach $5.4 billion by 2025.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="offline" class="offline">
+        <div class="container">
+            <div class="offline-content">
+                <div class="offline-text">
+                    <h2> Offline Concept</h2>
+                    <p>he app uses an Offline-First Architecture to overcome poor rural internet by prioritizing uninterrupted service. It achieves this by storing all essential data (profiles, prescriptions, stock) in encrypted local storage on the device.</p>
+                    <p>
+                         When connectivity is available, the system uses Delta Sync (only uploading changes) and Conflict Resolution to efficiently update the central server. 
+                    </p>
+                    <p>
+                        Core features like telemedicine (using Store-and-Forward media) and the Offline AI Symptom Checker are designed to function fully without a network, ensuring healthcare access is maintained even in 2G or no-network areas.
+                    </p>
+                </div>
+                <div class="offline-image">
+                    <img src="images/rural-bg.png" alt="Offline Features">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2>Contact Us</h2>
+            <form class="contact-form">
+                <div class="form-group">
+                    <input type="text" placeholder="Your Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" placeholder="Your Email" required>
+                </div>
+                <div class="form-group">
+                    <textarea rows="5" placeholder="Your Message" required></textarea>
+                </div>
+                <button type="submit" class="btn">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        // Smooth scrolling for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Scroll reveals with Intersection Observer
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('reveal');
+                }
+            });
+        }, observerOptions);
+
+        // Observe sections for reveal
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Parallax effect for hero
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const hero = document.querySelector('.hero');
+            if (hero) {
+                hero.style.backgroundPositionY = `${scrolled * 0.5}px`;
+            }
+        });
+    </script>

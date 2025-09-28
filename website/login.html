@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login - SIH Medical</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    html, body { height:100%; background-color:#000000; color:#fff; }
+
+    body { background:#000; line-height:1.5; }
+
+    .login-container {
+        width:600px;
+        margin:40px auto;
+        background:#1e293b; 
+        border-radius:20px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.5);
+        overflow:hidden;
+        color:#fff;
+    }
+
+    .header-section {
+        padding:40px;
+        text-align:center;
+        position:relative;
+    }
+
+    .logo-icon {
+        width:120px; height:120px;
+        margin:0 auto 20px;
+        border-radius:60px;
+        background-color:#0f766e;
+        display:flex; justify-content:center; align-items:center;
+        color:white; font-size:36px; font-weight:900;
+        box-shadow:0 8px 15px rgba(15,118,110,0.4);
+        border:3px solid #fff;
+        animation:logoScale 1.2s ease-out forwards;
+    }
+    @keyframes logoScale { from{transform:scale(0.8);} to{transform:scale(1);} }
+
+    .header-section h1 {
+        font-size:36px; font-weight:900; letter-spacing:2px;
+        margin-bottom:10px;
+        opacity:0; transform:translateY(20px); animation:fadeSlide 1s ease-out 0.2s forwards;
+    }
+    .header-section p { font-size:16px; margin-bottom:5px; opacity:0; transform:translateY(20px); animation:fadeSlide 1s ease-out 0.4s forwards; color:#d1d5db; }
+    @keyframes fadeSlide { to { opacity:1; transform:translateY(0); } }
+
+    .form-section {
+        padding:40px;
+        background:#0f172a;
+    }
+
+    .section-title { font-size:28px; font-weight:800; text-align:center; margin-bottom:30px; opacity:0; transform:scale(0.8); animation:scaleFade 1.2s ease-out forwards; color:#fff; }
+    @keyframes scaleFade { to { opacity:1; transform:scale(1); } }
+
+    .login-method-toggle { display:flex; background-color:#1e293b; border-radius:12px; margin-bottom:30px; overflow:hidden; }
+    .toggle-button { flex:1; padding:12px; text-align:center; cursor:pointer; transition:all 0.3s ease; color:#d1d5db; }
+    .toggle-button.active { background:#0f766e; box-shadow:0 2px 4px rgba(0,0,0,0.3); color:#fff; }
+    .toggle-button-text { font-size:16px; font-weight:600; }
+    .toggle-button-text.active { color:#fff; }
+
+    .form-group { margin-bottom:20px; }
+    .form-group label { display:block; font-weight:700; margin-bottom:10px; color:#fff; }
+    .form-group input { width:100%; padding:16px; border-radius:12px; border:2px solid #1e293b; font-size:16px; font-weight:600; color:#fff; background:#1e293b; transition:all 0.3s ease; }
+    .form-group input:focus { border-color:#0f766e; outline:none; box-shadow:0 0 0 3px rgba(15,118,110,0.2); }
+
+    .phone-input-container { display:flex; border-radius:12px; overflow:hidden; border:2px solid #1e293b; margin-bottom:20px; }
+    .country-code-container { background:#0f766e; padding:16px; display:flex; justify-content:center; align-items:center; }
+    .country-code { color:#fff; font-weight:700; }
+    .phone-input { flex:1; border:none; padding:16px; font-weight:600; color:#fff; background:#1e293b; }
+    .phone-input:focus { outline:none; }
+
+    .primary-button { width:100%; padding:16px; background:#0f766e; color:#fff; border:none; border-radius:12px; font-weight:800; font-size:17px; cursor:pointer; transition:all 0.3s ease; margin-bottom:10px; }
+    .primary-button:hover { background:#0d5a54; }
+
+    .secondary-button { width:100%; padding:14px; background:transparent; border:2px solid #0f766e; border-radius:12px; font-weight:600; color:#0f766e; cursor:pointer; transition:all 0.3s ease; }
+    .secondary-button:hover { background:#0f766e; color:#fff; }
+
+    .registration-prompt { text-align:center; margin-top:20px; }
+    .registration-button { border:2px solid #0f766e; border-radius:12px; padding:10px 25px; cursor:pointer; background:transparent; transition:all 0.3s ease; color:#0f766e; font-weight:600; }
+    .registration-button:hover { background:#0f766e; color:#fff; }
+
+    .home-button-container { text-align:center; margin-bottom:20px; }
+    .home-button {
+        padding:10px 25px; border-radius:12px; border:none; background:#0f766e; color:#fff; font-weight:600; cursor:pointer; transition:all 0.3s ease;
+    }
+    .home-button:hover { background:#0d5a54; }
+
+    .footer-section { padding:20px; text-align:center; color:#94a3b8; font-size:14px; background:#0f172a; }
+    .security-badge { display:inline-flex; align-items:center; background:#0f766e; padding:5px 15px; border-radius:20px; margin-bottom:10px; }
+    .security-badge span { color:#fff; font-weight:700; margin-left:5px; }
+
+</style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="header-section">
+        <div class="logo-icon">TN</div>
+        <h1>SIH Medical</h1>
+        <p>Access healthcare services anytime, anywhere</p>
+        <p>Secure & Reliable</p>
+    </div>
+
+    <!-- Home Button -->
+    <div class="home-button-container">
+        <button class="home-button" onclick="window.location.href='landing-page.html'">Home</button>
+    </div>
+
+    <section class="form-section">
+        <h2 class="section-title">Secure Login</h2>
+
+        <div class="login-method-toggle">
+            <div class="toggle-button active" onclick="setLoginMethod('phone')">
+                <span class="toggle-button-text active">Phone</span>
+            </div>
+            <div class="toggle-button" onclick="setLoginMethod('credentials')">
+                <span class="toggle-button-text">Credentials</span>
+            </div>
+        </div>
+
+        <!-- Phone Login -->
+        <div id="phoneLogin">
+            <div class="phone-input-container">
+                <div class="country-code-container"><span class="country-code">+91</span></div>
+                <input type="tel" placeholder="Enter mobile number" maxlength="10" class="phone-input">
+            </div>
+            <button class="primary-button">Send OTP</button>
+        </div>
+
+        <!-- Credentials Login -->
+        <div id="credentialsLogin" style="display:none;">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" placeholder="Username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" placeholder="Password">
+            </div>
+            <button class="primary-button">Login</button>
+        </div>
+
+        <div class="registration-prompt">
+            <button class="registration-button" onclick="goToRegister()">Register Here</button>
+        </div>
+    </section>
+
+    <footer class="footer-section">
+        <div class="security-badge"><span>🔒</span>SSL Secured</div>
+        <p>Your data is protected with enterprise-grade security. Compliant with HIPAA, GDPR & Indian Digital Health Mission Standards.</p>
+    </footer>
+</div>
+
+<script>
+function setLoginMethod(type){
+    document.getElementById('phoneLogin').style.display = type==='phone'?'block':'none';
+    document.getElementById('credentialsLogin').style.display = type==='credentials'?'block':'none';
+    document.querySelectorAll('.toggle-button').forEach(btn=>btn.classList.remove('active'));
+    document.querySelectorAll('.toggle-button-text').forEach(txt=>txt.classList.remove('active'));
+    if(type==='phone'){
+        document.querySelector('.toggle-button:first-child').classList.add('active');
+        document.querySelector('.toggle-button-text:first-child').classList.add('active');
+    } else {
+        document.querySelector('.toggle-button:last-child').classList.add('active');
+        document.querySelector('.toggle-button-text:last-child').classList.add('active');
+    }
+}
+function goToRegister(){ window.location.href = 'register.html'; }
+</script>
+
+</body>
+</html>

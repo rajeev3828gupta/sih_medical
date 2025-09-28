@@ -1282,22 +1282,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ navigation }) => {
       color: '#16a34a',
       action: () => navigation.navigate('VillageHealthNetwork'),
     },
-    {
-      id: '12',
-      title: 'FHIR Health Records',
-      description: 'Access standardized health records',
-      icon: '🏛️',
-      color: '#7c2d12',
-      action: () => navigation.navigate('FHIRDataViewer'),
-    },
-    {
-      id: '13',
-      title: 'Multi-Device Sync Demo',
-      description: 'See real-time sync across patient → doctor → chemist workflow',
-      icon: '🔄',
-      color: '#3b82f6',
-      action: () => navigation.navigate('MultiDeviceSyncDemo'),
-    },
+
   ];
 
   // ============================================================================

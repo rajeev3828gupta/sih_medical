@@ -9,9 +9,9 @@ export class GlobalSyncService {
   private isInitialized: boolean = false;
   private currentUser: any = null;
   private syncConfig = {
-    serverUrl: 'http://192.168.1.7:8080',
-    websocketEndpoint: 'ws://192.168.1.7:8080',
-    httpEndpoint: 'http://192.168.1.7:8080/api'
+    serverUrl: 'http://192.168.46.253:8080',
+    websocketEndpoint: 'ws://192.168.46.253:8080/sync',
+    httpEndpoint: 'http://192.168.46.253:8080/api'
   };
 
   static getInstance(): GlobalSyncService {

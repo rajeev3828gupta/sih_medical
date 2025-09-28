@@ -1,0 +1,4 @@
+- [ ] Add position: relative to .services CSS class
+- [ ] Insert heart-rate div HTML inside the services section
+- [ ] Add CSS styles for .heart-rate, .fade-in, .fade-out, and keyframes
+- [ ] Test the animation in browser
