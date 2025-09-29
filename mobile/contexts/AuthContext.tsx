@@ -6,7 +6,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'doctor' | 'patient' | 'pharmacy';
+  role: 'admin' | 'doctor' | 'patient' | 'pharmacy' | 'chemist';
   isAdmin: boolean;
 }
 
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string;
     name: string;
     id: string;
-    role: 'admin' | 'doctor' | 'patient' | 'pharmacy';
+    role: 'admin' | 'doctor' | 'patient' | 'pharmacy' | 'chemist';
   }> = [
     {
       username: 'doctor1',

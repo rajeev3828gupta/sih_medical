@@ -201,8 +201,8 @@ export function useRoleBasedData(user: any, globalData: any) {
         };
         break;
 
+      case 'pharmacy':
       case 'chemist':
-      case 'pharmacist':
         filtered = {
           availablePrescriptions: globalData.prescriptions?.filter((p: any) =>
             ['prescribed', 'partially_filled'].includes(p.status)

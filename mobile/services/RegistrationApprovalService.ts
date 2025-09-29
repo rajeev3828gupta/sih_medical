@@ -4,7 +4,7 @@ import { syncService } from './RealtimeSyncService';
 
 export interface PendingRegistration {
   id: string;
-  role: 'doctor' | 'patient' | 'pharmacy' | 'admin';
+  role: 'doctor' | 'patient' | 'pharmacy' | 'chemist' | 'admin';
   status: 'pending' | 'approved' | 'rejected';
   submittedAt: string;
   reviewedAt?: string;

@@ -35,6 +35,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
   // State management for prescription writing
   const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
   const [recentConsultations, setRecentConsultations] = useState<ConsultationBooking[]>([]);
+  const [prescriptionConsultations, setPrescriptionConsultations] = useState<ConsultationBooking[]>([]);
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationBooking | null>(null);
   const [allConsultations, setAllConsultations] = useState<ConsultationBooking[]>([]);
   
@@ -63,6 +64,8 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
   const [consultationBreakdownVisible, setConsultationBreakdownVisible] = useState(false);
   const [selectedConsultationCategory, setSelectedConsultationCategory] = useState<'total' | 'pending' | 'scheduled' | 'completed' | 'active'>('active');
   const [showCompletedOnDashboard, setShowCompletedOnDashboard] = useState(false);
+  const [consultationSearchQuery, setConsultationSearchQuery] = useState('');
+  const [consultationDateFilter, setConsultationDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   // Reports modal state
   const [reportsModalVisible, setReportsModalVisible] = useState(false);
@@ -81,8 +84,29 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       totalDoses: number;
       startDate: string;
       endDate: string;
+      frequency: string;
+      route: string;
     }>
   });
+
+  // Medicine suggestions and templates
+  const [medicineSearchQuery, setMedicineSearchQuery] = useState('');
+  const [showMedicineSuggestions, setShowMedicineSuggestions] = useState(false);
+
+  // Common medicine templates
+  const medicineTemplates = [
+    { name: 'Paracetamol', dosage: '500mg', frequency: '3 times daily', route: 'Oral', duration: '5 days', instructions: 'Take after meals' },
+    { name: 'Amoxicillin', dosage: '500mg', frequency: '3 times daily', route: 'Oral', duration: '7 days', instructions: 'Take with food' },
+    { name: 'Ibuprofen', dosage: '400mg', frequency: '3 times daily', route: 'Oral', duration: '3 days', instructions: 'Take after meals' },
+    { name: 'Aspirin', dosage: '75mg', frequency: 'Once daily', route: 'Oral', duration: '30 days', instructions: 'Take in morning' },
+    { name: 'Cetirizine', dosage: '10mg', frequency: 'Once daily', route: 'Oral', duration: '7 days', instructions: 'Take at bedtime' },
+  ];
+
+  // Dosage options
+  const dosageOptions = ['250mg', '500mg', '650mg', '1g', '2.5ml', '5ml', '10ml', '20ml'];
+  const frequencyOptions = ['Once daily', 'Twice daily', '3 times daily', '4 times daily', 'Every 6 hours', 'Every 8 hours', 'As needed'];
+  const routeOptions = ['Oral', 'Intravenous', 'Intramuscular', 'Topical', 'Inhalation', 'Rectal', 'Sublingual'];
+  const durationOptions = ['1 day', '3 days', '5 days', '7 days', '10 days', '14 days', '21 days', '30 days'];
 
   // Global sync integration for multi-device real-time updates
   const globalSync = useGlobalSync(user);
@@ -103,6 +127,15 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
     syncStatus: consultationSyncStatus,
     isLoading: consultationsLoading
   } = useSyncedConsultations();
+
+  // Handle sync errors gracefully
+  const handleSyncError = (error: any) => {
+    // Only log sync errors in development, don't show to user
+    if (__DEV__) {
+      console.warn('Sync operation failed:', error.message);
+    }
+    // Continue with local data or cached data
+  };
 
   // Watch for changes in synced consultations and reload when they change
   useEffect(() => {
@@ -487,19 +520,6 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
     },
     {
       id: '5',
-      title: t('doctor.reports'),
-      description: t('doctor.reports_desc'),
-      icon: '🔬',
-      color: '#06b6d4',
-      action: () => {
-        console.log('Reports card pressed');
-        loadRecentConsultations().then(() => {
-          setReportsModalVisible(true);
-        });
-      },
-    },
-    {
-      id: '6',
       title: t('doctor.emergency_cases'),
       description: t('doctor.emergency_cases_desc'),
       icon: '🚨',
@@ -525,14 +545,16 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
   // Prescription writing functions
   const addMedicine = () => {
     const newMedicine = {
-      name: '',
-      dosage: '',
-      duration: '',
-      instructions: '',
-      sideEffects: '',
-      totalDoses: 1,
+      name: 'Paracetamol',
+      dosage: '500mg',
+      duration: '5 days',
+      instructions: 'Take after meals',
+      sideEffects: 'Nausea, dizziness',
+      totalDoses: 15,
       startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0]
+      endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      frequency: '3 times daily',
+      route: 'Oral'
     };
     setPrescriptionForm(prev => ({
       ...prev,
@@ -1172,7 +1194,81 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
               <Text style={styles.closeButton}>×</Text>
             </TouchableOpacity>
           </View>
-          
+
+          {/* Search and Filter Controls */}
+          <View style={styles.searchFilterContainer}>
+            <View style={styles.searchInputContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="🔍 Search by patient name or symptoms..."
+                value={consultationSearchQuery}
+                onChangeText={setConsultationSearchQuery}
+              />
+            </View>
+
+            <View style={styles.dateFilterContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.dateFilterButton,
+                  consultationDateFilter === 'all' && styles.activeDateFilter
+                ]}
+                onPress={() => setConsultationDateFilter('all')}
+              >
+                <Text style={[
+                  styles.dateFilterText,
+                  consultationDateFilter === 'all' && styles.activeDateFilterText
+                ]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.dateFilterButton,
+                  consultationDateFilter === 'today' && styles.activeDateFilter
+                ]}
+                onPress={() => setConsultationDateFilter('today')}
+              >
+                <Text style={[
+                  styles.dateFilterText,
+                  consultationDateFilter === 'today' && styles.activeDateFilterText
+                ]}>
+                  Today
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.dateFilterButton,
+                  consultationDateFilter === 'week' && styles.activeDateFilter
+                ]}
+                onPress={() => setConsultationDateFilter('week')}
+              >
+                <Text style={[
+                  styles.dateFilterText,
+                  consultationDateFilter === 'week' && styles.activeDateFilterText
+                ]}>
+                  This Week
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.dateFilterButton,
+                  consultationDateFilter === 'month' && styles.activeDateFilter
+                ]}
+                onPress={() => setConsultationDateFilter('month')}
+              >
+                <Text style={[
+                  styles.dateFilterText,
+                  consultationDateFilter === 'month' && styles.activeDateFilterText
+                ]}>
+                  This Month
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Category Selection Tabs */}
           <View style={styles.categoryTabContainer}>
             <TouchableOpacity
@@ -1265,23 +1361,56 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
                 time: c.scheduledTime
               })));
               
-              let filteredConsultations = allConsultations;
+  let filteredConsultations = allConsultations;
 
-              if (selectedConsultationCategory === 'active') {
-                filteredConsultations = allConsultations.filter(c => c.status === 'scheduled' || c.status === 'confirmed');
-                console.log('Filtered active consultations:', filteredConsultations.length);
-              } else if (selectedConsultationCategory === 'pending') {
-                filteredConsultations = allConsultations.filter(c => c.status === 'scheduled');
-                console.log('Filtered requested consultations:', filteredConsultations.length);
-              } else if (selectedConsultationCategory === 'scheduled') {
-                filteredConsultations = allConsultations.filter(c => c.status === 'confirmed');
-                console.log('Filtered scheduled consultations:', filteredConsultations.length);
-              } else if (selectedConsultationCategory === 'completed') {
-                filteredConsultations = allConsultations.filter(c => c.status === 'completed');
-                console.log('Filtered completed consultations:', filteredConsultations.length);
-              } else {
-                console.log('Showing all consultations:', filteredConsultations.length);
-              }
+  if (selectedConsultationCategory === 'active') {
+    filteredConsultations = allConsultations.filter(c => c.status === 'scheduled' || c.status === 'confirmed');
+    console.log('Filtered active consultations:', filteredConsultations.length);
+  } else if (selectedConsultationCategory === 'pending') {
+    filteredConsultations = allConsultations.filter(c => c.status === 'scheduled');
+    console.log('Filtered requested consultations:', filteredConsultations.length);
+  } else if (selectedConsultationCategory === 'scheduled') {
+    filteredConsultations = allConsultations.filter(c => c.status === 'confirmed');
+    console.log('Filtered scheduled consultations:', filteredConsultations.length);
+  } else if (selectedConsultationCategory === 'completed') {
+    filteredConsultations = allConsultations.filter(c => c.status === 'completed');
+    console.log('Filtered completed consultations:', filteredConsultations.length);
+  } else {
+    console.log('Showing all consultations:', filteredConsultations.length);
+  }
+
+  // Apply search filter
+  if (consultationSearchQuery.trim()) {
+    const query = consultationSearchQuery.toLowerCase();
+    filteredConsultations = filteredConsultations.filter(c => {
+      const patientName = patientNames[c.patientId] || c.patientId;
+      const symptoms = c.symptoms || '';
+      return patientName.toLowerCase().includes(query) || symptoms.toLowerCase().includes(query);
+    });
+    console.log('After search filter:', filteredConsultations.length);
+  }
+
+  // Apply date filter
+  if (consultationDateFilter !== 'all') {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    filteredConsultations = filteredConsultations.filter(c => {
+      const consultationDate = new Date(c.scheduledDate);
+      if (consultationDateFilter === 'today') {
+        return c.scheduledDate === todayStr;
+      } else if (consultationDateFilter === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        return consultationDate >= weekAgo;
+      } else if (consultationDateFilter === 'month') {
+        const monthAgo = new Date(today);
+        monthAgo.setDate(today.getDate() - 30);
+        return consultationDate >= monthAgo;
+      }
+      return true;
+    });
+    console.log('After date filter:', filteredConsultations.length);
+  }
 
               if (filteredConsultations.length === 0) {
                 return (
@@ -2837,6 +2966,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     lineHeight: 20,
+  },
+
+  // Search and Filter Styles
+  searchFilterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  searchInputContainer: {
+    marginBottom: 12,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  dateFilterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dateFilterButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  activeDateFilter: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  dateFilterText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  activeDateFilterText: {
+    color: '#fff',
   },
 });
 

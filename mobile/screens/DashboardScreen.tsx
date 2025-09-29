@@ -54,6 +54,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       case 'doctor':
         return <DoctorDashboard navigation={navigation} />;
       case 'pharmacy':
+      case 'chemist':
         return <ChemistDashboard navigation={navigation} />;
       case 'patient':
       default:

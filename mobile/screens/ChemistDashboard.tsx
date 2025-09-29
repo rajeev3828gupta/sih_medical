@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,12 @@ import {
   Alert,
   Dimensions,
   Modal,
-  TextInput,
   FlatList,
+  TextInput,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useGlobalSync, useRoleBasedData, useRealtimeNotifications } from '../hooks/useGlobalSync';
 
 type ChemistDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -27,143 +25,105 @@ const { width } = Dimensions.get('window');
 
 const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
-  
-  // State for modals and data
-  const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
+
+  // Modal states
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
-  const [drugInfoModalVisible, setDrugInfoModalVisible] = useState(false);
-  const [counselingModalVisible, setCounselingModalVisible] = useState(false);
   const [salesModalVisible, setSalesModalVisible] = useState(false);
-  const [supplierModalVisible, setSupplierModalVisible] = useState(false);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [suppliersModalVisible, setSuppliersModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sample data for prescriptions
-  const [prescriptions, setPrescriptions] = useState([
-    { id: '1', patient: 'Rajesh Kumar', doctor: 'Dr. Sharma', medicines: ['Paracetamol 500mg - 2x daily', 'Amoxicillin 250mg - 3x daily'], status: 'Pending', date: '2024-01-15' },
-    { id: '2', patient: 'Priya Singh', doctor: 'Dr. Patel', medicines: ['Cetrizine 10mg - 1x daily'], status: 'Processing', date: '2024-01-15' },
-    { id: '3', patient: 'Amit Sharma', doctor: 'Dr. Gupta', medicines: ['Ibuprofen 400mg - 2x daily', 'Vitamin D3 - 1x daily'], status: 'Ready', date: '2024-01-14' },
-  ]);
-
-  // Sample inventory data
-  const [inventory, setInventory] = useState([
-    { id: '1', name: 'Paracetamol 500mg', category: 'Analgesic', stock: 150, price: 25, expiry: '2025-12-01' },
-    { id: '2', name: 'Amoxicillin 250mg', category: 'Antibiotic', stock: 75, price: 45, expiry: '2025-08-15' },
-    { id: '3', name: 'Cetrizine 10mg', category: 'Antihistamine', stock: 200, price: 15, expiry: '2025-10-20' },
-    { id: '4', name: 'Ibuprofen 400mg', category: 'Analgesic', stock: 120, price: 30, expiry: '2025-06-30' },
-    { id: '5', name: 'Vitamin D3', category: 'Supplement', stock: 90, price: 80, expiry: '2026-03-15' },
-  ]);
-
-  // Global sync integration
-  const globalSync = useGlobalSync(user);
-  const roleBasedData = useRoleBasedData(user, globalSync);
-  const notifications = useRealtimeNotifications(user);
-
-  // Get real-time prescription data
-  const syncedPrescriptions = roleBasedData.availablePrescriptions || prescriptions;
-  const syncedOrders = roleBasedData.myOrders || [];
-  const syncedMedications = roleBasedData.medications || inventory;
-
-  // Sample drug information
-  const drugDatabase = [
-    { 
-      name: 'Paracetamol', 
-      category: 'Analgesic/Antipyretic',
-      dosage: '500mg-1g every 4-6 hours',
-      sideEffects: 'Rare: skin rash, blood disorders',
-      contraindications: 'Severe liver disease',
-      interactions: 'Warfarin, Isoniazid'
-    },
-    { 
-      name: 'Amoxicillin', 
-      category: 'Antibiotic (Penicillin)',
-      dosage: '250-500mg every 8 hours',
-      sideEffects: 'Nausea, diarrhea, skin rash',
-      contraindications: 'Penicillin allergy',
-      interactions: 'Methotrexate, Oral contraceptives'
-    },
-    { 
-      name: 'Cetrizine', 
-      category: 'Antihistamine',
-      dosage: '10mg once daily',
-      sideEffects: 'Drowsiness, dry mouth',
-      contraindications: 'Severe kidney disease',
-      interactions: 'Alcohol, CNS depressants'
-    },
-  ];
-
-  // Sample sales data
-  const salesData = [
-    { date: '2024-01-15', amount: 4520, transactions: 28 },
-    { date: '2024-01-14', amount: 3890, transactions: 25 },
-    { date: '2024-01-13', amount: 5230, transactions: 32 },
-    { date: '2024-01-12', amount: 4150, transactions: 27 },
-    { date: '2024-01-11', amount: 3760, transactions: 23 },
-  ];
-
-  const chemistServices = [
-    {
-      id: '1',
-      title: t('chemist.prescription_orders'),
-      description: t('chemist.prescription_orders_desc'),
-      icon: '📋',
-      color: '#3b82f6',
-      action: () => setPrescriptionModalVisible(true),
-    },
-    {
-      id: '2',
-      title: t('chemist.inventory'),
-      description: t('chemist.inventory_desc'),
-      icon: '💊',
-      color: '#10b981',
-      action: () => setInventoryModalVisible(true),
-    },
-    {
-      id: '3',
-      title: t('chemist.drug_info'),
-      description: t('chemist.drug_info_desc'),
-      icon: '📚',
-      color: '#f59e0b',
-      action: () => setDrugInfoModalVisible(true),
-    },
-    {
-      id: '4',
-      title: t('chemist.counseling'),
-      description: t('chemist.counseling_desc'),
-      icon: '🗣️',
-      color: '#8b5cf6',
-      action: () => setCounselingModalVisible(true),
-    },
-    {
-      id: '5',
-      title: t('chemist.sales'),
-      description: t('chemist.sales_desc'),
-      icon: '📊',
-      color: '#06b6d4',
-      action: () => setSalesModalVisible(true),
-    },
-    {
-      id: '6',
-      title: t('chemist.suppliers'),
-      description: t('chemist.suppliers_desc'),
-      icon: '🚛',
-      color: '#dc2626',
-      action: () => setSupplierModalVisible(true),
-    },
-  ];
-
+  // Sample data
   const pendingOrders = [
-    { id: '1', patient: 'Rajesh Kumar', medicines: 3, priority: 'High', time: '2 hours ago' },
-    { id: '2', patient: 'Priya Singh', medicines: 1, priority: 'Normal', time: '4 hours ago' },
-    { id: '3', patient: 'Amit Sharma', medicines: 5, priority: 'Normal', time: '6 hours ago' },
-    { id: '4', patient: 'Sunita Devi', medicines: 2, priority: 'High', time: '8 hours ago' },
+    { id: '1', patient: 'Rajesh Kumar', medicines: ['Paracetamol 500mg', 'Amoxicillin 250mg'], time: '2 hours ago', priority: 'High' },
+    { id: '2', patient: 'Priya Singh', medicines: ['Cetrizine 10mg'], time: '4 hours ago', priority: 'Normal' },
+    { id: '3', patient: 'Amit Sharma', medicines: ['Ibuprofen 400mg', 'Vitamin D3'], time: '6 hours ago', priority: 'Normal' },
   ];
+
+  const [currentOrders, setCurrentOrders] = useState(pendingOrders);
 
   const lowStockItems = [
-    { name: 'Paracetamol 500mg', stock: 25, minStock: 100 },
-    { name: 'Amoxicillin 250mg', stock: 12, minStock: 50 },
-    { name: 'Cetrizine 10mg', stock: 8, minStock: 30 },
+    { id: '1', name: 'Paracetamol 500mg', stock: 25, minStock: 100 },
+    { id: '2', name: 'Amoxicillin 250mg', stock: 12, minStock: 50 },
   ];
+
+  const inventory = [
+    { id: '1', name: 'Paracetamol 500mg', category: 'Pain Relief', stock: 150, price: 25, expiry: '2025-12-01' },
+    { id: '2', name: 'Amoxicillin 250mg', category: 'Antibiotic', stock: 75, price: 45, expiry: '2025-08-15' },
+    { id: '3', name: 'Cetrizine 10mg', category: 'Antihistamine', stock: 200, price: 15, expiry: '2025-10-20' },
+    { id: '4', name: 'Ibuprofen 400mg', category: 'Pain Relief', stock: 120, price: 30, expiry: '2025-06-30' },
+  ];
+
+  const salesData = [
+    { date: 'Today', amount: 2450, transactions: 18 },
+    { date: 'Yesterday', amount: 3200, transactions: 22 },
+    { date: '2 days ago', amount: 1890, transactions: 15 },
+  ];
+
+  const orderHistory = [
+    { id: 'ORD001', patient: 'Rajesh Kumar', date: '2024-01-15', amount: 85, status: 'Completed' },
+    { id: 'ORD002', patient: 'Priya Singh', date: '2024-01-15', amount: 45, status: 'Completed' },
+    { id: 'ORD003', patient: 'Amit Sharma', date: '2024-01-14', amount: 120, status: 'Completed' },
+  ];
+
+  const suppliers = [
+    { id: '1', name: 'Cipla Ltd.', contact: '+91-9876543210', status: 'Active' },
+    { id: '2', name: 'Sun Pharma', contact: '+91-9876543211', status: 'Active' },
+    { id: '3', name: 'Dr. Reddy\'s', contact: '+91-9876543212', status: 'Active' },
+  ];
+
+  const handleProcessOrder = (orderId: string, patientName: string) => {
+    Alert.alert(
+      'Process Order',
+      `Process prescription for ${patientName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Process',
+          onPress: () => {
+            setCurrentOrders(prev => prev.filter(order => order.id !== orderId));
+            Alert.alert('Success', 'Order processed successfully!');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleReorder = (itemId: string, itemName: string) => {
+    Alert.alert(
+      'Reorder Stock',
+      `Send reorder request for ${itemName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Request',
+          onPress: () => {
+            Alert.alert('Success', 'Reorder request sent to suppliers!');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleUpdateStock = (itemId: string, itemName: string) => {
+    Alert.alert(
+      'Update Stock',
+      `Update stock level for ${itemName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update',
+          onPress: () => {
+            Alert.alert('Success', 'Stock updated successfully!');
+          }
+        }
+      ]
+    );
+  };
+
+  const filteredInventory = inventory.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <ScrollView style={styles.container}>
@@ -171,18 +131,18 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>{t('chemist.welcome')} {user?.name || t('chemist.title')}!</Text>
-            <Text style={styles.subtitle}>{t('chemist.subtitle')}</Text>
+            <Text style={styles.greeting}>Welcome, {user?.name || 'Chemist'}!</Text>
+            <Text style={styles.subtitle}>Manage your pharmacy</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.logoutButton}
             onPress={() => {
               Alert.alert(
-                t('common.logout'),
-                t('common.logout_confirm'),
+                'Logout',
+                'Are you sure you want to logout?',
                 [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  { text: t('common.logout'), style: 'destructive', onPress: async () => {
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Logout', style: 'destructive', onPress: async () => {
                     await logout();
                     navigation.navigate('Login');
                   }}
@@ -190,173 +150,125 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
               );
             }}
           >
-            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+            <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Sync Status */}
-      <View style={styles.syncStatusContainer}>
-        <View 
-          style={[
-            styles.syncIndicator, 
-            { backgroundColor: globalSync.getSyncHealth().isHealthy ? '#10b981' : '#ef4444' }
-          ]} 
-        />
-        <Text style={styles.syncStatusText}>
-          {globalSync.getSyncHealth().isHealthy ? 'Real-time Sync Active' : 'Sync Issues Detected'}
-        </Text>
-        <Text style={styles.syncDataCount}>
-          {syncedPrescriptions.length} prescriptions • {syncedMedications.length} items
-        </Text>
-        {notifications.unreadCount > 0 && (
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationText}>{notifications.unreadCount}</Text>
-          </View>
-        )}
-        <TouchableOpacity onPress={globalSync.forceSync}>
-          <Text style={styles.syncDataCount}>↻</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>18</Text>
-          <Text style={styles.statLabel}>{t('chemist.pending_orders')}</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>342</Text>
-          <Text style={styles.statLabel}>{t('chemist.stock_items')}</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>₹45,230</Text>
-          <Text style={styles.statLabel}>{t('chemist.todays_sales')}</Text>
-        </View>
-      </View>
-
-      {/* Pharmacy Services */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('chemist.services_title')}</Text>
-        <View style={styles.servicesGrid}>
-          {chemistServices.map((service) => (
-            <TouchableOpacity
-              key={service.id}
-              style={[styles.serviceCard, { borderLeftColor: service.color }]}
-              onPress={service.action}
-            >
-              <Text style={styles.serviceIcon}>{service.icon}</Text>
-              <Text style={styles.serviceTitle}>{service.title}</Text>
-              <Text style={styles.serviceDescription}>{service.description}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity style={styles.statCard} onPress={() => setHistoryModalVisible(true)}>
+          <Text style={styles.statNumber}>{currentOrders.length}</Text>
+          <Text style={styles.statLabel}>Pending Orders</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.statCard} onPress={() => setInventoryModalVisible(true)}>
+          <Text style={styles.statNumber}>{inventory.length}</Text>
+          <Text style={styles.statLabel}>Stock Items</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.statCard} onPress={() => setSalesModalVisible(true)}>
+          <Text style={styles.statNumber}>₹{salesData[0].amount.toLocaleString()}</Text>
+          <Text style={styles.statLabel}>Today's Sales</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Pending Orders */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('chemist.pending_prescriptions')}</Text>
-        {pendingOrders.map((order) => (
-          <View key={order.id} style={styles.orderCard}>
-            <View style={styles.orderHeader}>
-              <Text style={styles.patientName}>{order.patient}</Text>
-              <View style={[
-                styles.priorityBadge,
-                { backgroundColor: order.priority === 'High' ? '#fee2e2' : '#f0fdf4' }
-              ]}>
-                <Text style={[
-                  styles.priorityText,
-                  { color: order.priority === 'High' ? '#dc2626' : '#166534' }
-                ]}>
-                  {order.priority}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.orderDetails}>{order.medicines} medicines • {order.time}</Text>
-            <TouchableOpacity style={styles.processButton}>
-              <Text style={styles.processButtonText}>Process Order</Text>
-            </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Pending Prescriptions</Text>
+        {currentOrders.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No pending orders</Text>
           </View>
-        ))}
+        ) : (
+          currentOrders.map((order) => (
+            <View key={order.id} style={styles.orderCard}>
+              <View style={styles.orderHeader}>
+                <Text style={styles.patientName}>{order.patient}</Text>
+                <View style={styles.orderMeta}>
+                  <Text style={styles.orderTime}>{order.time}</Text>
+                  <View style={[
+                    styles.priorityBadge,
+                    { backgroundColor: order.priority === 'High' ? '#fee2e2' : '#f0fdf4' }
+                  ]}>
+                    <Text style={[
+                      styles.priorityText,
+                      { color: order.priority === 'High' ? '#dc2626' : '#166534' }
+                    ]}>
+                      {order.priority}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.medicinesList}>
+                {order.medicines.map((medicine, index) => (
+                  <Text key={index} style={styles.medicineItem}>• {medicine}</Text>
+                ))}
+              </View>
+              <TouchableOpacity
+                style={styles.processButton}
+                onPress={() => handleProcessOrder(order.id, order.patient)}
+              >
+                <Text style={styles.processButtonText}>Process Order</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
       </View>
 
       {/* Low Stock Alert */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>⚠️ {t('chemist.low_stock_alerts')}</Text>
-        {lowStockItems.map((item, index) => (
-          <View key={index} style={styles.stockCard}>
+        <Text style={styles.sectionTitle}>⚠️ Low Stock Alert</Text>
+        {lowStockItems.map((item) => (
+          <View key={item.id} style={styles.stockCard}>
             <View style={styles.stockInfo}>
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.stockLevel}>
                 Stock: {item.stock} (Min: {item.minStock})
               </Text>
             </View>
-            <TouchableOpacity style={styles.reorderButton}>
+            <TouchableOpacity
+              style={styles.reorderButton}
+              onPress={() => handleReorder(item.id, item.name)}
+            >
               <Text style={styles.reorderButtonText}>Reorder</Text>
             </TouchableOpacity>
           </View>
         ))}
       </View>
 
-      {/* Prescription Orders Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={prescriptionModalVisible}
-        onRequestClose={() => setPrescriptionModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Prescription Orders</Text>
-              <TouchableOpacity onPress={() => setPrescriptionModalVisible(false)}>
-                <Text style={styles.closeButton}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={prescriptions}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.prescriptionCard}>
-                  <View style={styles.prescriptionHeader}>
-                    <Text style={styles.patientName}>{item.patient}</Text>
-                    <View style={[styles.statusBadge, { 
-                      backgroundColor: item.status === 'Ready' ? '#dcfce7' : 
-                                      item.status === 'Processing' ? '#fef3c7' : '#fee2e2',
-                    }]}>
-                      <Text style={[styles.statusText, {
-                        color: item.status === 'Ready' ? '#166534' : 
-                               item.status === 'Processing' ? '#92400e' : '#dc2626',
-                      }]}>
-                        {item.status}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.doctorName}>Prescribed by: {item.doctor}</Text>
-                  <Text style={styles.dateText}>Date: {item.date}</Text>
-                  {item.medicines.map((medicine, index) => (
-                    <Text key={index} style={styles.medicineText}>• {medicine}</Text>
-                  ))}
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => {
-                      Alert.alert(t('chemist.process_prescription'), `${t('chemist.processing_for')} ${item.patient}`);
-                      setPrescriptions(prev => prev.map(p => 
-                        p.id === item.id ? { ...p, status: 'Processing' } : p
-                      ));
-                    }}
-                  >
-                    <Text style={styles.actionButtonText}>
-                      {item.status === 'Pending' ? 'Start Processing' : 
-                       item.status === 'Processing' ? 'Mark Ready' : 'Dispense'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-          </View>
+      {/* Quick Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.actionsGrid}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setInventoryModalVisible(true)}
+          >
+            <Text style={styles.actionIcon}>💊</Text>
+            <Text style={styles.actionText}>Check Inventory</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setSalesModalVisible(true)}
+          >
+            <Text style={styles.actionIcon}>📊</Text>
+            <Text style={styles.actionText}>Sales Report</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setHistoryModalVisible(true)}
+          >
+            <Text style={styles.actionIcon}>📋</Text>
+            <Text style={styles.actionText}>Order History</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setSuppliersModalVisible(true)}
+          >
+            <Text style={styles.actionIcon}>🚚</Text>
+            <Text style={styles.actionText}>Suppliers</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </View>
 
       {/* Inventory Modal */}
       <Modal
@@ -380,9 +292,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
               onChangeText={setSearchQuery}
             />
             <FlatList
-              data={inventory.filter(item => 
-                item.name.toLowerCase().includes(searchQuery.toLowerCase())
-              )}
+              data={filteredInventory}
               keyExtractor={item => item.id}
               renderItem={({ item }) => (
                 <View style={styles.inventoryCard}>
@@ -395,14 +305,12 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
                     <Text style={styles.inventoryText}>Price: ₹{item.price}</Text>
                     <Text style={styles.inventoryText}>Expiry: {item.expiry}</Text>
                   </View>
-                  <View style={styles.inventoryActions}>
-                    <TouchableOpacity 
-                      style={styles.updateStockButton}
-                      onPress={() => Alert.alert(t('chemist.update_stock'), `${t('chemist.update_stock_for')} ${item.name}`)}
-                    >
-                      <Text style={styles.updateStockText}>{t('chemist.update_stock')}</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.updateStockButton}
+                    onPress={() => handleUpdateStock(item.id, item.name)}
+                  >
+                    <Text style={styles.updateStockText}>Update Stock</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             />
@@ -410,57 +318,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Drug Information Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={drugInfoModalVisible}
-        onRequestClose={() => setDrugInfoModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Drug Information Database</Text>
-              <TouchableOpacity onPress={() => setDrugInfoModalVisible(false)}>
-                <Text style={styles.closeButton}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search drug information..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <FlatList
-              data={drugDatabase.filter(drug => 
-                drug.name.toLowerCase().includes(searchQuery.toLowerCase())
-              )}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.drugCard}>
-                  <Text style={styles.drugName}>{item.name}</Text>
-                  <Text style={styles.drugCategory}>{item.category}</Text>
-                  <View style={styles.drugDetails}>
-                    <Text style={styles.drugDetailTitle}>Dosage:</Text>
-                    <Text style={styles.drugDetailText}>{item.dosage}</Text>
-                    
-                    <Text style={styles.drugDetailTitle}>Side Effects:</Text>
-                    <Text style={styles.drugDetailText}>{item.sideEffects}</Text>
-                    
-                    <Text style={styles.drugDetailTitle}>Contraindications:</Text>
-                    <Text style={styles.drugDetailText}>{item.contraindications}</Text>
-                    
-                    <Text style={styles.drugDetailTitle}>Drug Interactions:</Text>
-                    <Text style={styles.drugDetailText}>{item.interactions}</Text>
-                  </View>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Sales Reports Modal */}
+      {/* Sales Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -470,7 +328,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Sales Reports</Text>
+              <Text style={styles.modalTitle}>Sales Report</Text>
               <TouchableOpacity onPress={() => setSalesModalVisible(false)}>
                 <Text style={styles.closeButton}>×</Text>
               </TouchableOpacity>
@@ -489,7 +347,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
               )}
             />
             <View style={styles.salesSummary}>
-              <Text style={styles.summaryTitle}>This Week Summary</Text>
+              <Text style={styles.summaryTitle}>Weekly Summary</Text>
               <Text style={styles.summaryText}>
                 Total Sales: ₹{salesData.reduce((sum, day) => sum + day.amount, 0).toLocaleString()}
               </Text>
@@ -501,93 +359,72 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Patient Counseling Modal */}
+      {/* Order History Modal */}
       <Modal
         animationType="slide"
         transparent={true}
-        visible={counselingModalVisible}
-        onRequestClose={() => setCounselingModalVisible(false)}
+        visible={historyModalVisible}
+        onRequestClose={() => setHistoryModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Patient Counseling</Text>
-              <TouchableOpacity onPress={() => setCounselingModalVisible(false)}>
+              <Text style={styles.modalTitle}>Order History</Text>
+              <TouchableOpacity onPress={() => setHistoryModalVisible(false)}>
                 <Text style={styles.closeButton}>×</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView>
-              <View style={styles.counselingSection}>
-                <Text style={styles.counselingTitle}>📋 Medication Adherence Tips</Text>
-                <Text style={styles.counselingText}>• Take medications at the same time daily</Text>
-                <Text style={styles.counselingText}>• Complete the full course of antibiotics</Text>
-                <Text style={styles.counselingText}>• Store medications in cool, dry places</Text>
-                <Text style={styles.counselingText}>• Check expiry dates regularly</Text>
-              </View>
-              
-              <View style={styles.counselingSection}>
-                <Text style={styles.counselingTitle}>⚠️ Common Side Effects</Text>
-                <Text style={styles.counselingText}>• Nausea: Take with food</Text>
-                <Text style={styles.counselingText}>• Drowsiness: Avoid driving</Text>
-                <Text style={styles.counselingText}>• Diarrhea: Stay hydrated</Text>
-                <Text style={styles.counselingText}>• Skin rash: Discontinue and consult doctor</Text>
-              </View>
-              
-              <View style={styles.counselingSection}>
-                <Text style={styles.counselingTitle}>🚨 When to Seek Help</Text>
-                <Text style={styles.counselingText}>• Severe allergic reactions</Text>
-                <Text style={styles.counselingText}>• Persistent side effects</Text>
-                <Text style={styles.counselingText}>• No improvement after course</Text>
-                <Text style={styles.counselingText}>• Accidental overdose</Text>
-              </View>
-            </ScrollView>
+            <FlatList
+              data={orderHistory}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.historyCard}>
+                  <View style={styles.historyHeader}>
+                    <Text style={styles.orderId}>{item.id}</Text>
+                    <Text style={styles.historyAmount}>₹{item.amount}</Text>
+                  </View>
+                  <Text style={styles.historyPatient}>{item.patient}</Text>
+                  <Text style={styles.historyDate}>{item.date}</Text>
+                  <View style={styles.statusContainer}>
+                    <Text style={[styles.statusText, { color: '#166534' }]}>{item.status}</Text>
+                  </View>
+                </View>
+              )}
+            />
           </View>
         </View>
       </Modal>
 
-      {/* Supplier Orders Modal */}
+      {/* Suppliers Modal */}
       <Modal
         animationType="slide"
         transparent={true}
-        visible={supplierModalVisible}
-        onRequestClose={() => setSupplierModalVisible(false)}
+        visible={suppliersModalVisible}
+        onRequestClose={() => setSuppliersModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Supplier Orders</Text>
-              <TouchableOpacity onPress={() => setSupplierModalVisible(false)}>
+              <Text style={styles.modalTitle}>Suppliers</Text>
+              <TouchableOpacity onPress={() => setSuppliersModalVisible(false)}>
                 <Text style={styles.closeButton}>×</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView>
-              <TouchableOpacity 
+            {suppliers.map((supplier) => (
+              <TouchableOpacity
+                key={supplier.id}
                 style={styles.supplierCard}
-                onPress={() => Alert.alert(t('chemist.order_from_cipla'), t('chemist.redirecting_to_order'))}
+                onPress={() => Alert.alert('Contact Supplier', `Call ${supplier.contact}?`)}
               >
-                <Text style={styles.supplierName}>🏢 Cipla Limited</Text>
-                <Text style={styles.supplierDetails}>{t('chemist.cipla_products')}</Text>
-                <Text style={styles.supplierStatus}>{t('common.status')}: {t('common.available')}</Text>
+                <View style={styles.supplierInfo}>
+                  <Text style={styles.supplierName}>{supplier.name}</Text>
+                  <Text style={styles.supplierContact}>{supplier.contact}</Text>
+                </View>
+                <View style={styles.supplierStatus}>
+                  <Text style={styles.statusText}>{supplier.status}</Text>
+                </View>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.supplierCard}
-                onPress={() => Alert.alert(t('chemist.order_from_sun_pharma'), t('chemist.redirecting_to_order'))}
-              >
-                <Text style={styles.supplierName}>🏢 Sun Pharmaceutical</Text>
-                <Text style={styles.supplierDetails}>{t('chemist.sun_pharma_products')}</Text>
-                <Text style={styles.supplierStatus}>{t('common.status')}: {t('common.available')}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.supplierCard}
-                onPress={() => Alert.alert(t('chemist.order_from_reddy'), t('chemist.redirecting_to_order'))}
-              >
-                <Text style={styles.supplierName}>🏢 Dr. Reddy's Laboratories</Text>
-                <Text style={styles.supplierDetails}>{t('chemist.reddy_products')}</Text>
-                <Text style={styles.supplierStatus}>{t('common.status')}: {t('common.available')}</Text>
-              </TouchableOpacity>
-            </ScrollView>
+            ))}
           </View>
         </View>
       </Modal>
@@ -610,21 +447,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logoutButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  logoutText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -634,6 +456,17 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#fef3c7',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -661,7 +494,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748b',
     textAlign: 'center',
   },
@@ -673,38 +506,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e293b',
     marginBottom: 16,
-  },
-  servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  serviceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    width: (width - 60) / 2,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  serviceIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  serviceTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  serviceDescription: {
-    fontSize: 12,
-    color: '#64748b',
   },
   orderCard: {
     backgroundColor: '#fff',
@@ -728,24 +529,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e293b',
   },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  priorityText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  orderDetails: {
+  orderTime: {
     fontSize: 14,
     color: '#64748b',
+  },
+  medicinesList: {
     marginBottom: 12,
+  },
+  medicineItem: {
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 2,
   },
   processButton: {
     backgroundColor: '#f59e0b',
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
   },
   processButtonText: {
@@ -791,6 +590,54 @@ const styles = StyleSheet.create({
   reorderButtonText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: (width - 60) / 2,
+    marginBottom: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+  orderMeta: {
+    alignItems: 'flex-end',
+  },
+  priorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priorityText: {
+    fontSize: 12,
     fontWeight: '600',
   },
   // Modal Styles
@@ -841,58 +688,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
   },
-  // Prescription Modal Styles
-  prescriptionCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
-  },
-  prescriptionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  doctorName: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  medicineText: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 2,
-  },
-  actionButton: {
-    backgroundColor: '#f59e0b',
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  // Inventory Modal Styles
   inventoryCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 8,
@@ -930,58 +725,18 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 2,
   },
-  inventoryActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
   updateStockButton: {
     backgroundColor: '#10b981',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
+    alignItems: 'center',
   },
   updateStockText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
-  // Drug Information Styles
-  drugCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
-  },
-  drugName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  drugCategory: {
-    fontSize: 14,
-    color: '#f59e0b',
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  drugDetails: {
-    marginTop: 8,
-  },
-  drugDetailTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  drugDetailText: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  // Sales Modal Styles
   salesCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 8,
@@ -1027,33 +782,61 @@ const styles = StyleSheet.create({
     color: '#0369a1',
     marginBottom: 4,
   },
-  // Counseling Modal Styles
-  counselingSection: {
-    marginBottom: 20,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 16,
-  },
-  counselingTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 12,
-  },
-  counselingText: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  // Supplier Modal Styles
-  supplierCard: {
+  historyCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#dc2626',
+    borderLeftColor: '#8b5cf6',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  orderId: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  historyAmount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#8b5cf6',
+  },
+  historyPatient: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  historyDate: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  statusContainer: {
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  supplierCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  supplierInfo: {
+    flex: 1,
   },
   supplierName: {
     fontSize: 16,
@@ -1061,58 +844,12 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     marginBottom: 4,
   },
-  supplierDetails: {
+  supplierContact: {
     fontSize: 14,
     color: '#64748b',
-    marginBottom: 4,
   },
   supplierStatus: {
-    fontSize: 14,
-    color: '#10b981',
-    fontWeight: '600',
-  },
-  
-  // Sync Status Styles
-  syncStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    padding: 12,
-    margin: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  syncIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  syncStatusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    flex: 1,
-  },
-  syncDataCount: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginRight: 8,
-  },
-  notificationBadge: {
-    backgroundColor: '#dc2626',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  notificationText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    alignItems: 'flex-end',
   },
 });
 
