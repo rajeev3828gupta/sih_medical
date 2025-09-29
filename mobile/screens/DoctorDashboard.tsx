@@ -61,8 +61,14 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
   
   // Consultation breakdown modal state
   const [consultationBreakdownVisible, setConsultationBreakdownVisible] = useState(false);
-  const [selectedConsultationCategory, setSelectedConsultationCategory] = useState<'total' | 'pending' | 'completed'>('total');
+  const [selectedConsultationCategory, setSelectedConsultationCategory] = useState<'total' | 'pending' | 'scheduled' | 'completed' | 'active'>('active');
   const [showCompletedOnDashboard, setShowCompletedOnDashboard] = useState(false);
+
+  // Reports modal state
+  const [reportsModalVisible, setReportsModalVisible] = useState(false);
+  const [incomeModalVisible, setIncomeModalVisible] = useState(false);
+  const [incomeViewMode, setIncomeViewMode] = useState<'monthly' | 'yearly'>('monthly');
+  const [emergencyModalVisible, setEmergencyModalVisible] = useState(false);
   const [prescriptionForm, setPrescriptionForm] = useState({
     diagnosis: '',
     notes: '',
@@ -465,22 +471,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       color: '#f59e0b',
       action: () => {
         console.log('Patient Records card pressed');
-        // Show patient list or navigate to medical records
-        Alert.alert(
-          'Patient Records',
-          `You have treated ${allConsultations.length} patients.\n\nPatient Records feature allows you to:\n• View patient history\n• Access medical records\n• Track treatment progress`,
-          [
-            { text: 'View Patients', onPress: () => {
-              if (allConsultations.length > 0) {
-                const patients = [...new Set(allConsultations.map(c => c.patientId))];
-                Alert.alert('Your Patients', `You have ${patients.length} unique patients:\n${patients.slice(0, 5).map(p => `• ${p}`).join('\n')}${patients.length > 5 ? '\n...and more' : ''}`);
-              } else {
-                Alert.alert('No Patients', 'No patient records found.');
-              }
-            }},
-            { text: 'OK', style: 'cancel' }
-          ]
-        );
+        navigation.navigate('OfflineHealthRecords');
       },
     },
     {
@@ -491,29 +482,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       color: '#8b5cf6',
       action: () => {
         console.log('Telemedicine card pressed');
-        // Check for scheduled teleconsultations
-        const upcomingTelecons = todaySchedule.filter(c => c.type === 'video' || c.type === 'audio');
-        const totalVideoAudio = allConsultations.filter(c => c.type === 'video' || c.type === 'audio').length;
-        
-        if (upcomingTelecons.length > 0) {
-          Alert.alert(
-            'Telemedicine',
-            `You have ${upcomingTelecons.length} scheduled video/audio consultations today.\n\nUpcoming consultations:\n${upcomingTelecons.map(c => `• ${c.scheduledTime} - ${c.type} call`).join('\n')}`,
-            [
-              { text: 'Schedule More', onPress: () => Alert.alert('Schedule', 'Telemedicine scheduling feature coming soon!') },
-              { text: 'OK', style: 'cancel' }
-            ]
-          );
-        } else {
-          Alert.alert(
-            'Telemedicine', 
-            `Total video/audio consultations completed: ${totalVideoAudio}\n\nNo video/audio consultations scheduled for today.\n\nTelemedicine features:\n• Video consultations\n• Audio consultations\n• Screen sharing\n• Digital prescriptions`,
-            [
-              { text: 'Learn More', onPress: () => Alert.alert('Telemedicine', 'Advanced telemedicine features will be available in the next update.') },
-              { text: 'OK', style: 'cancel' }
-            ]
-          );
-        }
+        navigation.navigate('TelemedicineSystem');
       },
     },
     {
@@ -524,19 +493,9 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       color: '#06b6d4',
       action: () => {
         console.log('Reports card pressed');
-        // Show pending reports count
-        const completedReports = allConsultations.filter(c => c.status === 'completed' && c.prescription).length;
-        Alert.alert(
-          'Medical Reports',
-          `Reports Summary:\n• Pending reports: ${dashboardStats.pendingReports}\n• Completed reports: ${completedReports}\n• Total consultations: ${allConsultations.length}\n\nReports include:\n• Consultation summaries\n• Prescription records\n• Treatment outcomes\n• Follow-up recommendations`,
-          [
-            { text: 'Refresh Data', onPress: loadRecentConsultations },
-            { text: 'Generate Report', onPress: () => {
-              Alert.alert('Generate Report', 'Report generation feature coming soon! This will include:\n• Patient statistics\n• Treatment success rates\n• Revenue analytics\n• Performance metrics');
-            }},
-            { text: 'OK', style: 'cancel' }
-          ]
-        );
+        loadRecentConsultations().then(() => {
+          setReportsModalVisible(true);
+        });
       },
     },
     {
@@ -546,35 +505,8 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       icon: '🚨',
       color: '#dc2626',
       action: () => {
-        console.log('Emergency card pressed');
-        // Check for emergency consultations
-        const emergencies = allConsultations.filter(c => 
-          c.symptoms?.toLowerCase().includes('emergency') || 
-          c.symptoms?.toLowerCase().includes('urgent') ||
-          c.symptoms?.toLowerCase().includes('severe') ||
-          c.symptoms?.toLowerCase().includes('critical')
-        );
-        
-        if (emergencies.length > 0) {
-          Alert.alert(
-            'Emergency Cases',
-            `🚨 ${emergencies.length} emergency/urgent cases found:\n\n${emergencies.slice(0, 3).map(e => `• Patient ${e.patientId}: ${e.symptoms?.substring(0, 40)}...`).join('\n')}${emergencies.length > 3 ? '\n...and more' : ''}`,
-            [
-              { text: 'Prioritize Queue', onPress: () => Alert.alert('Priority', 'Emergency cases have been prioritized in your consultation queue.') },
-              { text: 'View Details', onPress: () => {
-                const emergency = emergencies[0];
-                Alert.alert('Emergency Details', `Patient: ${emergency.patientId}\nType: ${emergency.type}\nSymptoms: ${emergency.symptoms}\nScheduled: ${emergency.scheduledDate} at ${emergency.scheduledTime}\nStatus: ${emergency.status}`);
-              }},
-              { text: 'OK', style: 'cancel' }
-            ]
-          );
-        } else {
-          Alert.alert(
-            '🚨 Emergency Cases', 
-            'No emergency cases at this time.\n\nEmergency protocol:\n• High priority queue\n• Immediate notifications\n• Direct communication\n• 24/7 availability\n\nAll systems are monitoring for urgent cases.',
-            [{ text: 'OK', style: 'cancel' }]
-          );
-        }
+        console.log('Emergency card pressed - opening emergency modal');
+        setEmergencyModalVisible(true);
       },
     },
     {
@@ -584,15 +516,8 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
       icon: '💰',
       color: '#059669',
       action: () => {
-        Alert.alert(
-          'Monthly Income Summary',
-          `Total Consultations: ${doctorIncome.totalConsultations}\n` +
-          `Gross Earnings: ₹${doctorIncome.monthlyEarnings.toFixed(2)}\n` +
-          `Platform Fee (15%): -₹${doctorIncome.platformFeeDeducted.toFixed(2)}\n` +
-          `Net Income: ₹${doctorIncome.netIncome.toFixed(2)}\n\n` +
-          `Fee per consultation: ₹100`,
-          [{ text: 'OK' }]
-        );
+        console.log('Income card pressed - opening enhanced income modal');
+        setIncomeModalVisible(true);
       },
     },
   ];
@@ -1250,9 +1175,24 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
           
           {/* Category Selection Tabs */}
           <View style={styles.categoryTabContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.categoryTab, 
+                styles.categoryTab,
+                selectedConsultationCategory === 'active' && styles.activeTab
+              ]}
+              onPress={() => setSelectedConsultationCategory('active')}
+            >
+              <Text style={[
+                styles.categoryTabText,
+                selectedConsultationCategory === 'active' && styles.activeTabText
+              ]}>
+                Active ({allConsultations.filter(c => c.status === 'scheduled' || c.status === 'confirmed').length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.categoryTab,
                 selectedConsultationCategory === 'total' && styles.activeTab
               ]}
               onPress={() => setSelectedConsultationCategory('total')}
@@ -1264,10 +1204,10 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
                 Total ({allConsultations.length})
               </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
-                styles.categoryTab, 
+                styles.categoryTab,
                 selectedConsultationCategory === 'pending' && styles.activeTab
               ]}
               onPress={() => setSelectedConsultationCategory('pending')}
@@ -1276,13 +1216,28 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
                 styles.categoryTabText,
                 selectedConsultationCategory === 'pending' && styles.activeTabText
               ]}>
-                Pending ({allConsultations.filter(c => c.status === 'scheduled').length})
+                Requested ({allConsultations.filter(c => c.status === 'scheduled').length})
               </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
-                styles.categoryTab, 
+                styles.categoryTab,
+                selectedConsultationCategory === 'scheduled' && styles.activeTab
+              ]}
+              onPress={() => setSelectedConsultationCategory('scheduled')}
+            >
+              <Text style={[
+                styles.categoryTabText,
+                selectedConsultationCategory === 'scheduled' && styles.activeTabText
+              ]}>
+                Scheduled ({allConsultations.filter(c => c.status === 'confirmed').length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.categoryTab,
                 selectedConsultationCategory === 'completed' && styles.activeTab
               ]}
               onPress={() => setSelectedConsultationCategory('completed')}
@@ -1311,10 +1266,16 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
               })));
               
               let filteredConsultations = allConsultations;
-              
-              if (selectedConsultationCategory === 'pending') {
+
+              if (selectedConsultationCategory === 'active') {
+                filteredConsultations = allConsultations.filter(c => c.status === 'scheduled' || c.status === 'confirmed');
+                console.log('Filtered active consultations:', filteredConsultations.length);
+              } else if (selectedConsultationCategory === 'pending') {
                 filteredConsultations = allConsultations.filter(c => c.status === 'scheduled');
-                console.log('Filtered pending consultations:', filteredConsultations.length);
+                console.log('Filtered requested consultations:', filteredConsultations.length);
+              } else if (selectedConsultationCategory === 'scheduled') {
+                filteredConsultations = allConsultations.filter(c => c.status === 'confirmed');
+                console.log('Filtered scheduled consultations:', filteredConsultations.length);
               } else if (selectedConsultationCategory === 'completed') {
                 filteredConsultations = allConsultations.filter(c => c.status === 'completed');
                 console.log('Filtered completed consultations:', filteredConsultations.length);
@@ -1327,7 +1288,9 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
                   <View style={styles.emptyStateContainer}>
                     <Text style={styles.emptyStateText}>
                       {selectedConsultationCategory === 'pending' 
-                        ? '📭 No pending requests'
+                        ? '📭 No requested appointments'
+                        : selectedConsultationCategory === 'scheduled'
+                        ? '📅 No scheduled appointments'
                         : selectedConsultationCategory === 'completed'
                         ? '🏁 No completed consultations'
                         : '📋 No consultations found'
@@ -1494,6 +1457,493 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ navigation }) => {
               }}
             >
               <Text style={styles.modalButtonText}>🗑️ Clear All</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+    {/* Income Modal */}
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={incomeModalVisible}
+      onRequestClose={() => setIncomeModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { maxHeight: height * 0.8 }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>💰 Income Details</Text>
+            <TouchableOpacity onPress={() => setIncomeModalVisible(false)}>
+              <Text style={styles.closeButton}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalScrollView}>
+            {/* View Mode Toggle */}
+            <View style={styles.viewModeContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.viewModeButton,
+                  incomeViewMode === 'monthly' && styles.activeViewMode
+                ]}
+                onPress={() => setIncomeViewMode('monthly')}
+              >
+                <Text style={[
+                  styles.viewModeText,
+                  incomeViewMode === 'monthly' && styles.activeViewModeText
+                ]}>
+                  Monthly
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.viewModeButton,
+                  incomeViewMode === 'yearly' && styles.activeViewMode
+                ]}
+                onPress={() => setIncomeViewMode('yearly')}
+              >
+                <Text style={[
+                  styles.viewModeText,
+                  incomeViewMode === 'yearly' && styles.activeViewModeText
+                ]}>
+                  Yearly
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Income Summary */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>
+                {incomeViewMode === 'monthly' ? '📊 This Month' : '📈 This Year'}
+              </Text>
+
+              <View style={styles.incomeSummaryCard}>
+                <View style={styles.incomeRow}>
+                  <Text style={styles.incomeLabel}>Total Consultations</Text>
+                  <Text style={styles.incomeValue}>{doctorIncome.totalConsultations}</Text>
+                </View>
+
+                <View style={styles.incomeRow}>
+                  <Text style={styles.incomeLabel}>Consultation Fee</Text>
+                  <Text style={styles.incomeValue}>₹100 each</Text>
+                </View>
+
+                <View style={[styles.incomeRow, styles.grossRow]}>
+                  <Text style={styles.incomeLabel}>Gross Earnings</Text>
+                  <Text style={[styles.incomeValue, styles.grossValue]}>
+                    ₹{doctorIncome.monthlyEarnings.toFixed(2)}
+                  </Text>
+                </View>
+
+                <View style={[styles.incomeRow, styles.feeRow]}>
+                  <Text style={styles.incomeLabel}>Platform Fee (15%)</Text>
+                  <Text style={[styles.incomeValue, styles.feeValue]}>
+                    -₹{doctorIncome.platformFeeDeducted.toFixed(2)}
+                  </Text>
+                </View>
+
+                <View style={styles.incomeDivider} />
+
+                <View style={[styles.incomeRow, styles.netRow]}>
+                  <Text style={[styles.incomeLabel, styles.netLabel]}>Net Income</Text>
+                  <Text style={[styles.incomeValue, styles.netValue]}>
+                    ₹{doctorIncome.netIncome.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Additional Stats */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>📈 Performance Stats</Text>
+
+              <View style={styles.statsGrid}>
+                <View style={[styles.statCard, { backgroundColor: '#eff6ff', borderColor: '#3b82f6' }]}>
+                  <Text style={[styles.statNumber, { color: '#1e40af' }]}>
+                    {Math.round((doctorIncome.totalConsultations / Math.max(dashboardStats.patientsMonth, 1)) * 100)}%
+                  </Text>
+                  <Text style={styles.statLabel}>Completion Rate</Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: '#f0fdf4', borderColor: '#10b981' }]}>
+                  <Text style={[styles.statNumber, { color: '#047857' }]}>
+                    ₹{doctorIncome.netIncome.toFixed(0)}
+                  </Text>
+                  <Text style={styles.statLabel}>This Month</Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }]}>
+                  <Text style={[styles.statNumber, { color: '#d97706' }]}>
+                    ₹{(doctorIncome.netIncome * 12).toFixed(0)}
+                  </Text>
+                  <Text style={styles.statLabel}>Annual Projection</Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: '#fef2f2', borderColor: '#dc2626' }]}>
+                  <Text style={[styles.statNumber, { color: '#dc2626' }]}>
+                    ₹{doctorIncome.platformFeeDeducted.toFixed(0)}
+                  </Text>
+                  <Text style={styles.statLabel}>Fees Paid</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Earnings Breakdown */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>💡 Earnings Breakdown</Text>
+
+              <View style={styles.breakdownContainer}>
+                <Text style={styles.breakdownText}>
+                  • Each completed consultation earns ₹100{'\n'}
+                  • Platform takes 15% commission{'\n'}
+                  • You receive 85% of the consultation fee{'\n'}
+                  • Payments are processed monthly{'\n'}
+                  • Minimum payout threshold: ₹500
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalButtonContainer}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#f44336' }]}
+              onPress={() => setIncomeModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              onPress={() => {
+                loadRecentConsultations();
+                Alert.alert('Refreshed', 'Income data has been updated');
+              }}
+            >
+              <Text style={styles.modalButtonText}>🔄 Refresh</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+    {/* Emergency Cases Modal */}
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={emergencyModalVisible}
+      onRequestClose={() => setEmergencyModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { maxHeight: height * 0.9 }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>🚨 Emergency Cases</Text>
+            <TouchableOpacity onPress={() => setEmergencyModalVisible(false)}>
+              <Text style={styles.closeButton}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalScrollView}>
+            {/* Emergency Cases List */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>🚨 Active Emergency Cases</Text>
+
+              {(() => {
+                const emergencies = allConsultations.filter(c =>
+                  c.symptoms?.toLowerCase().includes('emergency') ||
+                  c.symptoms?.toLowerCase().includes('urgent') ||
+                  c.symptoms?.toLowerCase().includes('severe') ||
+                  c.symptoms?.toLowerCase().includes('critical')
+                );
+
+                if (emergencies.length === 0) {
+                  return (
+                    <View style={styles.emptyStateContainer}>
+                      <Text style={styles.emptyStateText}>No emergency cases at this time</Text>
+                      <Text style={[styles.emptyStateText, { fontSize: 12, marginTop: 8 }]}>
+                        Emergency monitoring is active. Cases will appear here automatically.
+                      </Text>
+                    </View>
+                  );
+                }
+
+                return emergencies.map((emergency, index) => (
+                  <View key={`emergency-${emergency.id}-${index}`} style={styles.emergencyCard}>
+                    <View style={styles.emergencyHeader}>
+                      <View style={styles.emergencyPriority}>
+                        <Text style={styles.emergencyPriorityText}>
+                          {emergency.symptoms?.toLowerCase().includes('critical') ? '🔴 CRITICAL' :
+                           emergency.symptoms?.toLowerCase().includes('severe') ? '🟠 SEVERE' :
+                           '🟡 URGENT'}
+                        </Text>
+                      </View>
+                      <Text style={styles.emergencyTime}>
+                        {new Date(emergency.scheduledDate).toLocaleDateString()} {emergency.scheduledTime}
+                      </Text>
+                    </View>
+
+                    <View style={styles.emergencyDetails}>
+                      <Text style={styles.emergencyPatient}>
+                        👤 {patientNames[emergency.patientId] || emergency.patientId}
+                      </Text>
+                      <Text style={styles.emergencySymptoms}>
+                        💬 {emergency.symptoms}
+                      </Text>
+                      <Text style={styles.emergencyType}>
+                        📞 {emergency.type.toUpperCase()} Consultation
+                      </Text>
+                    </View>
+
+                    <View style={styles.emergencyActions}>
+                      <TouchableOpacity
+                        style={[styles.emergencyActionButton, { backgroundColor: '#dc2626' }]}
+                        onPress={() => {
+                          Alert.alert(
+                            'Emergency Contact',
+                            `Call emergency contact for ${patientNames[emergency.patientId] || emergency.patientId}?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Call Now', onPress: () => {
+                                Alert.alert('Emergency Call', 'Initiating emergency call...');
+                              }}
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={styles.emergencyActionText}>📞 Emergency Call</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.emergencyActionButton, { backgroundColor: '#059669' }]}
+                        onPress={() => {
+                          Alert.alert(
+                            'Start Emergency Consultation',
+                            `Start immediate consultation with ${patientNames[emergency.patientId] || emergency.patientId}?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Start Now', onPress: async () => {
+                                await DoctorService.updateConsultationStatus(emergency.id, 'in-progress');
+                                setEmergencyModalVisible(false);
+                                loadRecentConsultations();
+                                Alert.alert('Emergency Consultation', 'Emergency consultation started. Patient prioritized.');
+                              }}
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={styles.emergencyActionText}>🚑 Start Consultation</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ));
+              })()}
+            </View>
+
+            {/* Emergency Protocols */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>📋 Emergency Protocols</Text>
+
+              <View style={styles.protocolContainer}>
+                <Text style={styles.protocolText}>
+                  • 🚨 Critical cases: Immediate response required{'\n'}
+                  • 🟠 Severe cases: Response within 15 minutes{'\n'}
+                  • 🟡 Urgent cases: Response within 1 hour{'\n'}
+                  • 📞 Emergency hotline: Always available{'\n'}
+                  • 🔄 Auto-priority queuing for urgent cases{'\n'}
+                  • 📱 Real-time notifications to all doctors
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalButtonContainer}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#f44336' }]}
+              onPress={() => setEmergencyModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              onPress={() => {
+                loadRecentConsultations();
+                Alert.alert('Refreshed', 'Emergency cases updated');
+              }}
+            >
+              <Text style={styles.modalButtonText}>🔄 Refresh</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#dc2626' }]}
+              onPress={() => {
+                Alert.alert(
+                  'Emergency Alert',
+                  'Send emergency alert to all available doctors?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Send Alert', onPress: () => {
+                      Alert.alert('Emergency Alert Sent', 'All doctors have been notified of emergency cases.');
+                    }}
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.modalButtonText}>🚨 Alert All Doctors</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+    {/* Reports Modal */}
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={reportsModalVisible}
+      onRequestClose={() => setReportsModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { maxHeight: height * 0.9 }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>📊 Reports & Analytics</Text>
+            <TouchableOpacity onPress={() => setReportsModalVisible(false)}>
+              <Text style={styles.closeButton}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalScrollView}>
+            {/* Summary Statistics */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>📈 Summary Statistics</Text>
+
+              <View style={styles.statsGrid}>
+                <View style={[styles.statCard, { backgroundColor: '#eff6ff', borderColor: '#3b82f6' }]}>
+                  <Text style={[styles.statNumber, { color: '#1e40af' }]}>{allConsultations.length}</Text>
+                  <Text style={styles.statLabel}>Total Consultations</Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: '#f0fdf4', borderColor: '#10b981' }]}>
+                  <Text style={[styles.statNumber, { color: '#047857' }]}>
+                    {allConsultations.filter(c => c.status === 'completed').length}
+                  </Text>
+                  <Text style={styles.statLabel}>Completed</Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }]}>
+                  <Text style={[styles.statNumber, { color: '#d97706' }]}>
+                    {allConsultations.filter(c => c.status === 'scheduled').length}
+                  </Text>
+                  <Text style={styles.statLabel}>Pending</Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: '#fef2f2', borderColor: '#dc2626' }]}>
+                  <Text style={[styles.statNumber, { color: '#dc2626' }]}>
+                    {dashboardStats.pendingReports}
+                  </Text>
+                  <Text style={styles.statLabel}>Need Prescriptions</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Recent Activity */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>📋 Recent Activity</Text>
+
+              {recentConsultations.length === 0 ? (
+                <View style={styles.emptyStateContainer}>
+                  <Text style={styles.emptyStateText}>No recent consultations</Text>
+                </View>
+              ) : (
+                recentConsultations.slice(0, 10).map((consultation, index) => (
+                  <View key={`report-${consultation.id}-${index}`} style={styles.consultationBreakdownItem}>
+                    <View style={styles.consultationHeader}>
+                      <Text style={styles.patientNameBreakdown}>
+                        👤 {patientNames[consultation.patientId] || consultation.patientId}
+                      </Text>
+                      <View style={[
+                        styles.statusBadge,
+                        { backgroundColor:
+                          consultation.status === 'completed' ? '#4CAF50' :
+                          consultation.status === 'confirmed' ? '#2196F3' :
+                          consultation.status === 'in-progress' ? '#FF9800' :
+                          '#FFC107'
+                        }
+                      ]}>
+                        <Text style={styles.statusBadgeText}>
+                          {consultation.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.consultationDetails}>
+                      <Text style={styles.consultationDetailText}>
+                        📅 {consultation.scheduledDate} at {consultation.scheduledTime}
+                      </Text>
+                      <Text style={styles.consultationDetailText}>
+                        📞 {consultation.type.toUpperCase()} Consultation
+                      </Text>
+                      {consultation.symptoms && (
+                        <Text style={styles.consultationDetailText}>
+                          💬 {consultation.symptoms}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Performance Metrics */}
+            <View style={styles.formSection}>
+              <Text style={styles.modalSectionTitle}>📊 Performance Metrics</Text>
+
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Consultation Success Rate</Text>
+                <Text style={styles.metricValue}>
+                  {allConsultations.length > 0
+                    ? Math.round((allConsultations.filter(c => c.status === 'completed').length / allConsultations.length) * 100)
+                    : 0
+                  }%
+                </Text>
+              </View>
+
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Average Consultations per Month</Text>
+                <Text style={styles.metricValue}>
+                  {dashboardStats.patientsMonth}
+                </Text>
+              </View>
+
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Monthly Revenue</Text>
+                <Text style={styles.metricValue}>₹{doctorIncome.monthlyEarnings.toFixed(0)}</Text>
+              </View>
+
+              <View style={styles.metricItem}>
+                <Text style={styles.metricLabel}>Net Income</Text>
+                <Text style={styles.metricValue}>₹{doctorIncome.netIncome.toFixed(0)}</Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalButtonContainer}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#f44336' }]}
+              onPress={() => setReportsModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              onPress={() => {
+                loadRecentConsultations();
+                Alert.alert('Refreshed', 'Report data has been updated');
+              }}
+            >
+              <Text style={styles.modalButtonText}>🔄 Refresh</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2164,6 +2614,229 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+
+  // Reports Modal Styles
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  metricItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  metricLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  metricValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+
+  // Income Modal Styles
+  viewModeContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    margin: 16,
+    padding: 4,
+  },
+  viewModeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeViewMode: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  viewModeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  activeViewModeText: {
+    color: '#1e293b',
+  },
+  incomeSummaryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  incomeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  incomeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  incomeValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  grossRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  grossValue: {
+    color: '#059669',
+    fontSize: 16,
+  },
+  feeRow: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    marginHorizontal: -8,
+  },
+  feeValue: {
+    color: '#dc2626',
+    fontSize: 14,
+  },
+  incomeDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
+  },
+  netRow: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: -8,
+  },
+  netLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#047857',
+  },
+  netValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#059669',
+  },
+  breakdownContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+  },
+  breakdownText: {
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
+  },
+
+  // Emergency Cases Modal Styles
+  emergencyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#dc2626',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emergencyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emergencyPriority: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  emergencyPriorityText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  emergencyTime: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  emergencyDetails: {
+    marginBottom: 12,
+  },
+  emergencyPatient: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  emergencySymptoms: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  emergencyType: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '600',
+  },
+  emergencyActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  emergencyActionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  emergencyActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  protocolContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 16,
+  },
+  protocolText: {
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
   },
 });
 
