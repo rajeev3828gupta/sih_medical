@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { globalSyncService } from '../services/GlobalSyncService';
+import { useSyncedData } from '../hooks/useSyncedData';
 
 type ChemistDashboardNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -32,46 +34,59 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [suppliersModalVisible, setSuppliersModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [syncStatus, setSyncStatus] = useState({ isInitialized: false, currentUser: null });
 
-  // Sample data
-  const pendingOrders = [
-    { id: '1', patient: 'Rajesh Kumar', medicines: ['Paracetamol 500mg', 'Amoxicillin 250mg'], time: '2 hours ago', priority: 'High' },
-    { id: '2', patient: 'Priya Singh', medicines: ['Cetrizine 10mg'], time: '4 hours ago', priority: 'Normal' },
-    { id: '3', patient: 'Amit Sharma', medicines: ['Ibuprofen 400mg', 'Vitamin D3'], time: '6 hours ago', priority: 'Normal' },
-  ];
+  // Initialize global sync on mount
+  useEffect(() => {
+    if (user) {
+      globalSyncService.initialize(user).then(() => {
+        setSyncStatus(globalSyncService.getSyncStatus());
+      }).catch(console.error);
+    }
+    return () => {
+      globalSyncService.cleanup();
+    };
+  }, [user]);
 
-  const [currentOrders, setCurrentOrders] = useState(pendingOrders);
+  // Use synced data hooks
+  const {
+    data: currentOrders,
+    isLoading: ordersLoading,
+    error: ordersError,
+    updateData: updateOrder
+  } = useSyncedData('prescriptions', []);
 
-  const lowStockItems = [
-    { id: '1', name: 'Paracetamol 500mg', stock: 25, minStock: 100 },
-    { id: '2', name: 'Amoxicillin 250mg', stock: 12, minStock: 50 },
-  ];
+  const {
+    data: inventory,
+    isLoading: inventoryLoading,
+    error: inventoryError,
+    updateData: updateInventory
+  } = useSyncedData('inventory', []);
 
-  const inventory = [
-    { id: '1', name: 'Paracetamol 500mg', category: 'Pain Relief', stock: 150, price: 25, expiry: '2025-12-01' },
-    { id: '2', name: 'Amoxicillin 250mg', category: 'Antibiotic', stock: 75, price: 45, expiry: '2025-08-15' },
-    { id: '3', name: 'Cetrizine 10mg', category: 'Antihistamine', stock: 200, price: 15, expiry: '2025-10-20' },
-    { id: '4', name: 'Ibuprofen 400mg', category: 'Pain Relief', stock: 120, price: 30, expiry: '2025-06-30' },
-  ];
+  const {
+    data: salesData,
+    isLoading: salesLoading,
+    error: salesError
+  } = useSyncedData('sales', []);
 
-  const salesData = [
-    { date: 'Today', amount: 2450, transactions: 18 },
-    { date: 'Yesterday', amount: 3200, transactions: 22 },
-    { date: '2 days ago', amount: 1890, transactions: 15 },
-  ];
+  const {
+    data: orderHistory,
+    isLoading: historyLoading,
+    error: historyError
+  } = useSyncedData('orders', []);
 
-  const orderHistory = [
-    { id: 'ORD001', patient: 'Rajesh Kumar', date: '2024-01-15', amount: 85, status: 'Completed' },
-    { id: 'ORD002', patient: 'Priya Singh', date: '2024-01-15', amount: 45, status: 'Completed' },
-    { id: 'ORD003', patient: 'Amit Sharma', date: '2024-01-14', amount: 120, status: 'Completed' },
-  ];
+  const {
+    data: suppliers,
+    isLoading: suppliersLoading,
+    error: suppliersError
+  } = useSyncedData('suppliers', []);
 
-  const suppliers = [
-    { id: '1', name: 'Cipla Ltd.', contact: '+91-9876543210', status: 'Active' },
-    { id: '2', name: 'Sun Pharma', contact: '+91-9876543211', status: 'Active' },
-    { id: '3', name: 'Dr. Reddy\'s', contact: '+91-9876543212', status: 'Active' },
-  ];
+  // Filter inventory based on search query
+  const filteredInventory = inventory.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
+  // Handlers updated to use sync methods
   const handleProcessOrder = (orderId: string, patientName: string) => {
     Alert.alert(
       'Process Order',
@@ -80,9 +95,13 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Process',
-          onPress: () => {
-            setCurrentOrders(prev => prev.filter(order => order.id !== orderId));
-            Alert.alert('Success', 'Order processed successfully!');
+          onPress: async () => {
+            try {
+              await updateOrder(orderId, { status: 'processed' });
+              Alert.alert('Success', 'Order processed successfully!');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to process order');
+            }
           }
         }
       ]
@@ -113,17 +132,18 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Update',
-          onPress: () => {
-            Alert.alert('Success', 'Stock updated successfully!');
+          onPress: async () => {
+            try {
+              await updateInventory(itemId, { stock: 100 });
+              Alert.alert('Success', 'Stock updated successfully!');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to update stock');
+            }
           }
         }
       ]
     );
   };
-
-  const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <ScrollView style={styles.container}>
@@ -133,6 +153,9 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
           <View>
             <Text style={styles.greeting}>Welcome, {user?.name || 'Chemist'}!</Text>
             <Text style={styles.subtitle}>Manage your pharmacy</Text>
+            <Text style={{color: syncStatus.isInitialized ? 'lightgreen' : 'red', fontSize: 12}}>
+              Sync Status: {syncStatus.isInitialized ? 'Connected' : 'Disconnected'}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.logoutButton}
@@ -158,7 +181,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
         <TouchableOpacity style={styles.statCard} onPress={() => setHistoryModalVisible(true)}>
-          <Text style={styles.statNumber}>{currentOrders.length}</Text>
+          <Text style={styles.statNumber}>{currentOrders.filter(order => order.status !== 'processed').length}</Text>
           <Text style={styles.statLabel}>Pending Orders</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.statCard} onPress={() => setInventoryModalVisible(true)}>
@@ -166,7 +189,7 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
           <Text style={styles.statLabel}>Stock Items</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.statCard} onPress={() => setSalesModalVisible(true)}>
-          <Text style={styles.statNumber}>₹{salesData[0].amount.toLocaleString()}</Text>
+          <Text style={styles.statNumber}>₹{salesData[0]?.amount?.toLocaleString() || 0}</Text>
           <Text style={styles.statLabel}>Today's Sales</Text>
         </TouchableOpacity>
       </View>
@@ -174,17 +197,21 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
       {/* Pending Orders */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Pending Prescriptions</Text>
-        {currentOrders.length === 0 ? (
+        {ordersLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Loading orders...</Text>
+          </View>
+        ) : currentOrders.filter(order => order.status !== 'processed').length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No pending orders</Text>
           </View>
         ) : (
-          currentOrders.map((order) => (
+          currentOrders.filter(order => order.status !== 'processed').map((order) => (
             <View key={order.id} style={styles.orderCard}>
               <View style={styles.orderHeader}>
-                <Text style={styles.patientName}>{order.patient}</Text>
+                <Text style={styles.patientName}>{order.patientName || order.patient || 'Unknown'}</Text>
                 <View style={styles.orderMeta}>
-                  <Text style={styles.orderTime}>{order.time}</Text>
+                  <Text style={styles.orderTime}>{order.time || order.createdAt || ''}</Text>
                   <View style={[
                     styles.priorityBadge,
                     { backgroundColor: order.priority === 'High' ? '#fee2e2' : '#f0fdf4' }
@@ -193,19 +220,19 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
                       styles.priorityText,
                       { color: order.priority === 'High' ? '#dc2626' : '#166534' }
                     ]}>
-                      {order.priority}
+                      {order.priority || 'Normal'}
                     </Text>
                   </View>
                 </View>
               </View>
               <View style={styles.medicinesList}>
-                {order.medicines.map((medicine, index) => (
+                {(order.medicines || order.items || []).map((medicine: string, index: number) => (
                   <Text key={index} style={styles.medicineItem}>• {medicine}</Text>
                 ))}
               </View>
               <TouchableOpacity
                 style={styles.processButton}
-                onPress={() => handleProcessOrder(order.id, order.patient)}
+                onPress={() => handleProcessOrder(order.id, order.patientName || order.patient || 'Unknown')}
               >
                 <Text style={styles.processButtonText}>Process Order</Text>
               </TouchableOpacity>
@@ -217,12 +244,12 @@ const ChemistDashboard: React.FC<ChemistDashboardProps> = ({ navigation }) => {
       {/* Low Stock Alert */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⚠️ Low Stock Alert</Text>
-        {lowStockItems.map((item) => (
+        {inventory.filter(item => item.stock < (item.minStock || 50)).map((item) => (
           <View key={item.id} style={styles.stockCard}>
             <View style={styles.stockInfo}>
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.stockLevel}>
-                Stock: {item.stock} (Min: {item.minStock})
+                Stock: {item.stock} (Min: {item.minStock || 50})
               </Text>
             </View>
             <TouchableOpacity

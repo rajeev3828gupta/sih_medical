@@ -4,8 +4,8 @@ echo  📱 Expo Multi-Device Quick Start
 echo ==========================================
 echo.
 
-echo 🌐 Your IP: 192.168.1.7
-echo 🔌 WebSocket: ws://192.168.1.7:8080
+echo 🌐 Your IP: 172.16.95.32
+echo 🔌 WebSocket: ws://172.16.95.32:8080
 echo 📱 Make sure all devices are on same WiFi!
 echo.
 
