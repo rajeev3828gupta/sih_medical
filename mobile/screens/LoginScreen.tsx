@@ -34,6 +34,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [phoneNumber, setPhoneNumber] = React.useState('');
+    const [showPassword, setShowPassword] = React.useState(false);
     const [otp, setOtp] = React.useState('');
     const [otpSent, setOtpSent] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(false);
@@ -383,14 +384,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   autoCapitalize="none"
                 />
                 <Text style={styles.inputLabel}>{t('password')}</Text>
-                <TextInput
-                  style={styles.credentialInput}
-                  placeholder={t('password')}
-                  placeholderTextColor="#6b7280"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder={t('password')}
+                    placeholderTextColor="#6b7280"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIconContainer}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Text style={styles.eyeIcon}>
+                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 
                 <AnimatedButton
                   style={[styles.primaryButton, isLoading && styles.disabledButton]}
@@ -938,6 +949,32 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       },
       languageSelector: {
         marginTop: 10,
+      },
+      passwordInputContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: '#e2e8f0',
+        marginBottom: 20,
+        alignItems: 'center',
+      },
+      passwordInput: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingVertical: 18,
+        fontSize: 16,
+        color: '#1e293b',
+        fontWeight: '600',
+      },
+      eyeIconContainer: {
+        paddingHorizontal: 15,
+        paddingVertical: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      eyeIcon: {
+        fontSize: 20,
       },
 });
 

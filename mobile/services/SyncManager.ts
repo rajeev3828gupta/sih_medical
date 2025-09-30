@@ -14,8 +14,8 @@ export interface SyncConfig {
 
 // Default configuration
 const DEFAULT_CONFIG: Partial<SyncConfig> = {
-  serverUrl: 'http://172.16.95.32:8080', // Your computer's IP address
-  websocketEndpoint: 'ws://172.16.95.32:8080', // WebSocket server
+  serverUrl: 'http://192.168.46.253:8080', // Your computer's IP address
+  websocketEndpoint: 'ws://192.168.46.253:8080', // WebSocket server
   autoConnect: true,
   enableOfflineMode: true,
 };

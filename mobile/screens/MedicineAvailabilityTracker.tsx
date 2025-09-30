@@ -99,7 +99,13 @@ interface StockPrediction {
   factors: string[];
 }
 
-const MedicineAvailabilityTracker: React.FC = () => {
+interface MedicineAvailabilityTrackerProps {
+  showStatsOverview?: boolean;
+}
+
+const MedicineAvailabilityTracker: React.FC<MedicineAvailabilityTrackerProps> = ({
+  showStatsOverview = true
+}) => {
   const { t } = useLanguage();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
@@ -136,7 +142,8 @@ const MedicineAvailabilityTracker: React.FC = () => {
   // Sample data for Nabha and surrounding villages
   const nabhaVillages = [
     'Nabha', 'Sanour', 'Bhadson', 'Ghanaur', 'Amloh', 'Samana',
-    'Patran', 'Rajpura', 'Malerkotla', 'Dhuri', 'Sunam', 'Dirba'
+    'Patran', 'Rajpura', 'Malerkotla', 'Dhuri', 'Sunam', 'Dirba',
+    'Barnala', 'Sangrur', 'Ludhiana', 'Jagraon', 'Raikot', 'Khanna'
   ];
 
   const sampleMedicines: Medicine[] = [
@@ -641,6 +648,48 @@ const MedicineAvailabilityTracker: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Dashboard Statistics Overview */}
+      {showStatsOverview && (
+        <View style={styles.statsOverview}>
+          <Text style={styles.statsTitle}>📊 Dashboard Overview</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{medicines.length}</Text>
+              <Text style={styles.statLabel}>Total Medicines</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{pharmacies.length}</Text>
+              <Text style={styles.statLabel}>Active Pharmacies</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>
+                {medicines.filter(m => m.status === 'available').length}
+              </Text>
+              <Text style={styles.statLabel}>Available Now</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>
+                {medicines.filter(m => m.daysUntilStockout <= 2 && m.daysUntilStockout > 0).length}
+              </Text>
+              <Text style={styles.statLabel}>Low Stock Alerts</Text>
+            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.quickActionBtn}>
+              <Text style={styles.quickActionText}>🔄 Refresh Data</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionBtn}>
+              <Text style={styles.quickActionText}>📞 Emergency Call</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionBtn}>
+              <Text style={styles.quickActionText}>📍 Find Nearest</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Search and Filter */}
       <View style={styles.searchContainer}>
@@ -1775,6 +1824,92 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Dashboard Statistics Overview Styles
+  statsOverview: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#f0f4f8',
+  },
+  statsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3748',
+    marginBottom: 20,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  statCard: {
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    width: '48%',
+    marginBottom: 12,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quickActionBtn: {
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 10,
+    flex: 1,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  quickActionText: {
+    fontSize: 13,
+    color: '#4a5568',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
 

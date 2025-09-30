@@ -71,6 +71,11 @@
     .phone-input { flex:1; border:none; padding:16px; font-weight:600; color:#fff; background:#1e293b; }
     .phone-input:focus { outline:none; }
 
+    .password-input-container { position:relative; display:flex; align-items:center; }
+    .password-input-container input { padding-right:50px; }
+    .password-toggle { position:absolute; right:10px; background:none; border:none; color:#d1d5db; cursor:pointer; font-size:18px; padding:5px; transition:all 0.3s ease; }
+    .password-toggle:hover { color:#0f766e; }
+
     .primary-button { width:100%; padding:16px; background:#0f766e; color:#fff; border:none; border-radius:12px; font-weight:800; font-size:17px; cursor:pointer; transition:all 0.3s ease; margin-bottom:10px; }
     .primary-button:hover { background:#0d5a54; }
 
@@ -137,7 +142,12 @@
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" placeholder="Password">
+                <div class="password-input-container">
+                    <input type="password" id="passwordInput" placeholder="Password">
+                    <button type="button" id="togglePassword" class="password-toggle">
+                        <span id="eyeIcon">👁️</span>
+                    </button>
+                </div>
             </div>
             <button class="primary-button">Login</button>
         </div>
@@ -167,7 +177,29 @@ function setLoginMethod(type){
         document.querySelector('.toggle-button-text:last-child').classList.add('active');
     }
 }
+
+function togglePasswordVisibility(){
+    const passwordInput = document.getElementById('passwordInput');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    if(passwordInput.type === 'password'){
+        passwordInput.type = 'text';
+        eyeIcon.textContent = '🙈';
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.textContent = '👁️';
+    }
+}
+
 function goToRegister(){ window.location.href = 'register.html'; }
+
+// Add event listener for password toggle
+document.addEventListener('DOMContentLoaded', function(){
+    const toggleButton = document.getElementById('togglePassword');
+    if(toggleButton){
+        toggleButton.addEventListener('click', togglePasswordVisibility);
+    }
+});
 </script>
 
 </body>
